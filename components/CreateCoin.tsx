@@ -295,7 +295,7 @@ export default function CreateCoin() {
           </p>
         </div>
 
-        <button className="w-full md:w-auto bg-green-400 text-black font-bold py-3 px-8 rounded-lg hover:bg-green-500 transition-colors">
+        <button className="w-full md:w-auto bg-violet-400 text-black font-bold py-3 px-8 rounded-lg hover:bg-violet-500 transition-colors">
           Create coin
         </button>
       </div>

@@ -31,7 +31,7 @@ export default function Navbar() {
 
   return (
     <nav className="bg-[var(--background)] text-[var(--foreground)] border-b border-[var(--border-color)] relative z-50">
-      <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-[1400px] mx-auto px-6 h-[63px] flex items-center justify-between">
         {/* Mobile Menu Button */}
         <button
             className="md:hidden text-[var(--muted)] hover:text-[var(--foreground)] mr-3"

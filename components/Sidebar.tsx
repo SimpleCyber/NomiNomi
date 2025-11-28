@@ -88,7 +88,7 @@ export function SidebarContent({
               className={`group flex items-center gap-3 p-2 rounded-lg transition-colors relative
                 ${
                   isActive
-                    ? "bg-blue-500/10 text-blue-500"
+                    ? "bg-violet-500/10 text-violet-500"
                     : "hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
                 }
               `}
