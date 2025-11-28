@@ -330,12 +330,12 @@ export default function MarketTicker() {
             </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {markets.map((market) => (
-                <div key={market.id} className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-4 hover:border-blue-500/50 transition-colors cursor-pointer group">
+                <div key={market.id} className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-5 hover:border-blue-500/50 transition-colors cursor-pointer group">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-[var(--foreground)]">
+                            <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl font-bold text-[var(--foreground)]">
                                 {market.symbol[0]}
                             </div>
                             <div>
