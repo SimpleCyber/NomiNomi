@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #f4f4f5;
+  --foreground: #0f1014;
+  --sidebar-width: 16rem;
+  --sidebar-bg: #f4f4f5;
+  --sidebar-border: #e4e4e7;
+  --card-bg: #ffffff;
+  --input-bg: #f4f4f5;
+  --border-color: #e4e4e7;
+  --muted: #71717a;
+}
+
+.dark {
+  --background: #0f1014;
+  --foreground: #ffffff;
+  --sidebar-bg: #0f1014;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --card-bg: #141519;
+  --input-bg: #1a1b1f;
+  --border-color: rgba(255, 255, 255, 0.05);
+  --muted: #a1a1aa;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: InterVariable, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  transition: color 0.3s, background-color 0.3s;
+}
