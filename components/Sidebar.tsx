@@ -3,27 +3,13 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import {
-  Layout,
-  Tv,
-  BarChart2,
-  PlusCircle,
-  HelpCircle,
-  User,
   ChevronLeft,
-  ChevronRight,
-  Menu,
-  MessageCircle,
-  Coins,
-  CirclePoundSterling,
-  BitcoinIcon,
-  Home,
   Sun,
   Moon,
-  RefreshCcw,
 } from "lucide-react";
 import Link from "next/link";
-
 import { usePathname } from "next/navigation";
+import { MENU_ITEMS, BOTTOM_MENU_ITEMS } from "@/data/constants";
 
 export function SidebarContent({
   isCollapsed,
@@ -42,20 +28,6 @@ export function SidebarContent({
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
-
-  const menuItems = [
-    { name: "Home", icon: Home, href: "/" },
-    { name: "Live stream", icon: Tv, href: "/livestream" },
-    { name: "Chat Friends", icon: MessageCircle, href: "#" },
-    { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
-    { name: "My Profile", icon: User, href: "#" },
-    { name: "Create coin", icon: PlusCircle, href: "/createcoin" },
-  ];
-
-  const bottomItems = [
-    { name: "Support", icon: HelpCircle, href: "/support" },
-    // { name: "Profile", icon: User, href: "/profile" },
-  ];
 
   return (
     <div className="flex flex-col h-full bg-[var(--sidebar-bg)]">
@@ -104,7 +76,7 @@ export function SidebarContent({
 
       {/* Main Menu */}
       <div className="flex-1 py-4 flex flex-col gap-2 px-2 overflow-y-auto">
-        {menuItems.map((item) => {
+        {MENU_ITEMS.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== "/" && pathname?.startsWith(item.href));
@@ -167,7 +139,7 @@ export function SidebarContent({
           )}
         </button>
 
-        {bottomItems.map((item) => (
+        {BOTTOM_MENU_ITEMS.map((item) => (
           <Link
             key={item.name}
             href={item.href}
@@ -204,7 +176,6 @@ export default function Sidebar() {
 
   // Load collapsed state from localStorage on mount
   useEffect(() => {
-    setMounted(true);
     const savedState = localStorage.getItem("sidebarCollapsed");
     const collapsed = savedState === "true";
 
@@ -218,6 +189,7 @@ export default function Sidebar() {
       collapsed ? "4rem" : "16rem",
     );
     setIsLoaded(true);
+    setMounted(true);
   }, []);
 
   // Update CSS variable when state changes

@@ -3,76 +3,17 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const slides = [
-  {
-    id: 1,
-    image: "/home-banner-season-4.webp",
-    title: "Season 4 is Here",
-    description: "Trade to earn rewards in the new season.",
-    buttonText: "Join Now",
-    buttonLink: "#",
-    align: "left",
-  },
-  {
-    id: 2,
-    image: "/home-banner-stacked-yield-usd-new.webp",
-    title: "Stacked Yield",
-    description: "Earn yield on your SOL assets.",
-    buttonText: "Start Earning",
-    buttonLink: "#",
-    align: "left",
-  },
-
-  {
-    id: 3,
-    image: "/home-banner-stacked-yield-sol-new.webp",
-    title: "Stacked Yield",
-    description: "Earn yield on your SOL assets.",
-    buttonText: "Start Earning",
-    buttonLink: "#",
-    align: "left",
-  },
-
-  {
-    id: 4,
-    image: "/home-banner-usdt-4.webp",
-    title: "Got USDT?",
-    description: "Convert to USD with 0 fees and start trading on NomiNomi!",
-    buttonText: "Trade USDT",
-    buttonLink: "#",
-    align: "left",
-  },
-
-  {
-    id: 5,
-    image: "/home-banner-refer-3.webp",
-    title: "Refer Friends",
-    description: "Invite friends and earn commissions together.",
-    buttonText: "Invite Now",
-    buttonLink: "#",
-    align: "left",
-  },
-  {
-    id: 6,
-    image: "/home-banner-wire-transfers-2.webp",
-    title: "Wire Transfers",
-    description: "Easy and fast wire transfers now available.",
-    buttonText: "Learn More",
-    buttonLink: "#",
-    align: "left",
-  },
-];
+import { HERO_SLIDES } from "@/data/constants";
 
 export default function Hero() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   };
 
   useEffect(() => {
@@ -84,8 +25,8 @@ export default function Hero() {
 
   return (
     <div className="relative w-full max-w-[1400px] mx-auto mt-4 px-6">
-      <div className="relative h-[200px] sm:h-[320px] md:h-[350px] w-full rounded-2xl overflow-hidden bg-[#141519] border border-white/5 group">
-        {slides.map((slide, index) => (
+      <div className="relative h-[200px] sm:h-[320px] md:h-[350px] w-full rounded-2xl overflow-hidden bg-[var(--card-bg)] border border-[var(--border-color)] group">
+        {HERO_SLIDES.map((slide, index) => (
           <div
             key={slide.id}
             className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
@@ -135,7 +76,7 @@ export default function Hero() {
 
         {/* Dots */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-          {slides.map((_, index) => (
+          {HERO_SLIDES.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}

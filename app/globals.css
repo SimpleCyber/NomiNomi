@@ -15,29 +15,112 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
+  
+  --color-card: var(--card-bg);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover-bg);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-input: var(--input-bg);
+  --color-border: var(--border-color);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-border: var(--sidebar-border);
 }
 
 :root {
+  /* Base Colors */
   --background: #f4f4f5;
   --foreground: #0f1014;
-  --sidebar-width: 16rem;
-  --sidebar-bg: #f4f4f5;
-  --sidebar-border: #e4e4e7;
+  
+  /* Primary Brand Colors */
+  --primary: #7c3aed; /* Violet 600 */
+  --primary-foreground: #ffffff;
+  
+  /* Secondary Colors */
+  --secondary: #e4e4e7;
+  --secondary-foreground: #18181b;
+  
+  /* Accent Colors */
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  
+  /* Status Colors */
+  --success: #10b981; /* Emerald 500 */
+  --error: #ef4444; /* Red 500 */
+  --warning: #f59e0b; /* Amber 500 */
+  
+  /* UI Specific */
   --card-bg: #ffffff;
+  --card-foreground: #0f1014;
+  --popover-bg: #ffffff;
+  --popover-foreground: #0f1014;
+  
   --input-bg: #f4f4f5;
   --border-color: #e4e4e7;
   --muted: #71717a;
+  --muted-foreground: #a1a1aa;
+  
+  /* Layout */
+  --sidebar-width: 16rem;
+  --sidebar-bg: #f4f4f5;
+  --sidebar-border: #e4e4e7;
 }
 
 .dark {
+  /* Base Colors */
   --background: #0f1014;
   --foreground: #ffffff;
-  --sidebar-bg: #0f1014;
-  --sidebar-border: rgba(255, 255, 255, 0.05);
+  
+  /* Primary Brand Colors */
+  --primary: #8b5cf6; /* Violet 500 */
+  --primary-foreground: #ffffff;
+  
+  /* Secondary Colors */
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+  
+  /* Accent Colors */
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  
+  /* UI Specific */
   --card-bg: #141519;
+  --card-foreground: #ffffff;
+  --popover-bg: #141519;
+  --popover-foreground: #ffffff;
+  
   --input-bg: #1a1b1f;
   --border-color: rgba(255, 255, 255, 0.05);
   --muted: #a1a1aa;
+  --muted-foreground: #71717a;
+  
+  /* Layout */
+  --sidebar-bg: #0f1014;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
 }
 
 body {

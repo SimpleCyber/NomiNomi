@@ -1,211 +1,9 @@
 "use client";
 
-import { ArrowUp, ArrowDown, LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
-
-const markets = [
-  {
-    id: 1,
-    name: "HAPPYSANTA",
-    symbol: "Santa",
-    price: "$15.80K",
-    volume: "$414.38",
-    marketCap: "$15.80K",
-    change: "+298.45%",
-    change5m: "-",
-    change1h: "+298.45%",
-    change6h: "+298.45%",
-    isPositive: true,
-    chartData: [10, 12, 11, 13, 15, 20, 25, 30, 35, 40],
-    bondingCurve: 95,
-    ath: "$15.9K",
-    age: "17m",
-    txns: 57,
-    traders: 4,
-    image: "/santa.png", // Placeholder
-  },
-  {
-    id: 2,
-    name: "butterjak",
-    symbol: "butterjak",
-    price: "$18.88K",
-    volume: "$18.35K",
-    marketCap: "$18.88K",
-    change: "+263.51%",
-    change5m: "+263.51%",
-    change1h: "+263.51%",
-    change6h: "+263.51%",
-    isPositive: true,
-    chartData: [20, 22, 25, 28, 30, 35, 40, 45, 50, 55],
-    bondingCurve: 45,
-    ath: "$26.7K",
-    age: "1m",
-    txns: 159,
-    traders: 106,
-    image: "/butterjak.png", // Placeholder
-  },
-  {
-    id: 3,
-    name: "The Spiderkid",
-    symbol: "Spiderkid",
-    price: "$19.53K",
-    volume: "$37.22K",
-    marketCap: "$19.53K",
-    change: "+280.50%",
-    change5m: "+67.92%",
-    change1h: "+280.50%",
-    change6h: "+280.50%",
-    isPositive: true,
-    chartData: [15, 18, 20, 22, 25, 24, 28, 32, 35, 38],
-    bondingCurve: 60,
-    ath: "$20.6K",
-    age: "6m",
-    txns: 789,
-    traders: 296,
-    image: "/spiderkid.png", // Placeholder
-  },
-  {
-    id: 4,
-    name: "Perillius Portal",
-    symbol: "Perillius",
-    price: "$25.74K",
-    volume: "$212.58K",
-    marketCap: "$25.74K",
-    change: "+453.60%",
-    change5m: "-28.52%",
-    change1h: "+453.60%",
-    change6h: "+453.60%",
-    isPositive: true,
-    chartData: [10, 15, 25, 35, 30, 25, 20, 15, 10, 12],
-    bondingCurve: 30,
-    ath: "$61.9K",
-    age: "28m",
-    txns: 3840,
-    traders: 1006,
-    image: "/portal.png", // Placeholder
-  },
-  {
-    id: 5,
-    name: "Stranger Things",
-    symbol: "5",
-    price: "$15.42K",
-    volume: "$5.22K",
-    marketCap: "$15.42K",
-    change: "+266.41%",
-    change5m: "-0.47%",
-    change1h: "+266.41%",
-    change6h: "+266.41%",
-    isPositive: true,
-    chartData: [12, 13, 14, 15, 16, 18, 20, 22, 24, 26],
-    bondingCurve: 90,
-    ath: "$15.5K",
-    age: "9m",
-    txns: 59,
-    traders: 5,
-    image: "/stranger.png", // Placeholder
-  },
-  {
-    id: 6,
-    name: "Phone Wojak",
-    symbol: "PHONEWOJAK",
-    price: "$184.27K",
-    volume: "$1.72M",
-    marketCap: "$184.27K",
-    change: "+2,762.70%",
-    change5m: "+1.37%",
-    change1h: "-86.10%",
-    change6h: "+2,762.70%",
-    isPositive: true,
-    chartData: [10, 20, 15, 30, 25, 40, 35, 50, 45, 60],
-    bondingCurve: 85,
-    ath: "$184.5K",
-    age: "2h",
-    txns: 10348,
-    traders: 2537,
-    image: "/wojak.png", // Placeholder
-  },
-  {
-    id: 7,
-    name: "Anna",
-    symbol: "Anna",
-    price: "$6.55K",
-    volume: "$61.17K",
-    marketCap: "$6.55K",
-    change: "+55.92%",
-    change5m: "-52.77%",
-    change1h: "-25.77%",
-    change6h: "+55.92%",
-    isPositive: true,
-    chartData: [30, 28, 32, 35, 38, 36, 34, 32, 30, 28],
-    bondingCurve: 25,
-    ath: "$15.9K",
-    age: "1h",
-    txns: 1522,
-    traders: 363,
-    image: "/anna.png", // Placeholder
-  },
-];
-
-const Sparkline = ({
-  data,
-  isPositive,
-}: {
-  data: number[];
-  isPositive: boolean;
-}) => {
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const height = 30;
-  const width = 80;
-  const step = width / (data.length - 1);
-
-  const points = data
-    .map((val, i) => {
-      const x = i * step;
-      const y = height - ((val - min) / range) * height;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <svg width={width} height={height} className="overflow-visible">
-      <defs>
-        <linearGradient
-          id={`gradient-${isPositive ? "pos" : "neg"}`}
-          x1="0"
-          x2="0"
-          y1="0"
-          y2="1"
-        >
-          <stop
-            offset="0%"
-            stopColor={isPositive ? "#10b981" : "#ef4444"}
-            stopOpacity="0.2"
-          />
-          <stop
-            offset="100%"
-            stopColor={isPositive ? "#10b981" : "#ef4444"}
-            stopOpacity="0"
-          />
-        </linearGradient>
-      </defs>
-      <polyline
-        points={points}
-        fill="none"
-        stroke={isPositive ? "#10b981" : "#ef4444"}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <polygon
-        points={`${points} ${width},${height} 0,${height}`}
-        fill={`url(#gradient-${isPositive ? "pos" : "neg"})`}
-        stroke="none"
-      />
-    </svg>
-  );
-};
+import { MARKETS } from "@/data/constants";
+import { Sparkline } from "@/components/ui/Sparkline";
 
 export default function MarketTicker() {
   const [activeTab, setActiveTab] = useState("Spot");
@@ -221,7 +19,7 @@ export default function MarketTicker() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === tab
-                  ? "bg-white/10 dark:bg-white/10 bg-black/5 text-[var(--foreground)]"
+                  ? "bg-black/5 dark:bg-white/10 text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:text-blue-500"
               }`}
             >
@@ -291,7 +89,7 @@ export default function MarketTicker() {
                 </tr>
               </thead>
               <tbody>
-                {markets.map((market, index) => (
+                {MARKETS.map((market, index) => (
                   <tr
                     key={market.id}
                     className="border-b border-[var(--border-color)] last:border-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer h-16"
@@ -379,7 +177,7 @@ export default function MarketTicker() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {markets.map((market) => (
+          {MARKETS.map((market) => (
             <div
               key={market.id}
               className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-5 hover:border-blue-500/50 transition-colors cursor-pointer group"
