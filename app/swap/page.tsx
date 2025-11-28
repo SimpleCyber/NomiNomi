@@ -56,18 +56,19 @@ export default function SwapPage() {
               </div>
 
               {/* RIGHT SIDE → Token Swap Iframe */}
-              <div className="order-1 md:order-2 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] overflow-hidden w-[500px]">
-                <div className="relative w-full" style={{ maxHeight: "600px" }}>
-                  <iframe
-                    src="https://houdiniswap.com"
-                    className="w-full h-full border-0"
-                    style={{ minHeight: "600px" }}
-                    title="HoudiniSwap Token Swap Interface"
-                    allow="clipboard-read; clipboard-write"
-                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                  />
-                </div>
-              </div>
+             <div className="order-1 md:order-2 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] overflow-hidden w-full sm:w-[400px] md:w-[500px]">
+  <div className="relative w-full" style={{ maxHeight: "600px" }}>
+    <iframe
+      src="https://houdiniswap.com"
+      className="w-full h-full border-0"
+      style={{ minHeight: "600px" }}
+      title="HoudiniSwap Token Swap Interface"
+      allow="clipboard-read; clipboard-write"
+      sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+    />
+  </div>
+</div>
+
             </div>
           </div>
         </div>
