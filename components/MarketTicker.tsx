@@ -192,7 +192,7 @@ export default function MarketTicker() {
   const [viewMode, setViewMode] = useState<"list" | "cards">("list");
 
   return (
-    <div className="w-full max-w-[1800px] mx-auto mt-8 px-6 pb-12">
+    <div className="w-full max-w-[1400px] mx-auto mt-8 px-6 pb-12">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
             {["Spot", "Futures", "Lend"].map((tab) => (
