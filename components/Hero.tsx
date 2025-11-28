@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const slides = [
-    {
+  {
     id: 1,
     image: "/home-banner-season-4.webp",
     title: "Season 4 is Here",
@@ -14,7 +14,7 @@ const slides = [
     buttonLink: "#",
     align: "left",
   },
-    {
+  {
     id: 2,
     image: "/home-banner-stacked-yield-usd-new.webp",
     title: "Stacked Yield",
@@ -24,7 +24,7 @@ const slides = [
     align: "left",
   },
 
-   {
+  {
     id: 3,
     image: "/home-banner-stacked-yield-sol-new.webp",
     title: "Stacked Yield",
@@ -41,11 +41,10 @@ const slides = [
     description: "Convert to USD with 0 fees and start trading on NomiNomi!",
     buttonText: "Trade USDT",
     buttonLink: "#",
-    align: "left", 
+    align: "left",
   },
 
-
-   {
+  {
     id: 5,
     image: "/home-banner-refer-3.webp",
     title: "Refer Friends",
@@ -54,7 +53,7 @@ const slides = [
     buttonLink: "#",
     align: "left",
   },
-   {
+  {
     id: 6,
     image: "/home-banner-wire-transfers-2.webp",
     title: "Wire Transfers",
@@ -100,10 +99,11 @@ export default function Hero() {
               className="object-cover"
               priority={index === 0}
             />
-            <div 
+            <div
               className="absolute inset-0 flex flex-col justify-center px-6 md:px-16"
               style={{
-                background: "linear-gradient(rgba(17, 19, 22, 0.1), rgba(17, 19, 22, 0.2), rgba(17, 19, 22, 0.25), rgba(17, 19, 22, 0.85))"
+                background:
+                  "linear-gradient(rgba(17, 19, 22, 0.1), rgba(17, 19, 22, 0.2), rgba(17, 19, 22, 0.25), rgba(17, 19, 22, 0.85))",
               }}
             >
               <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 max-w-xl">
@@ -140,7 +140,9 @@ export default function Hero() {
               key={index}
               onClick={() => setCurrentSlide(index)}
               className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentSlide ? "bg-white" : "bg-white/30 hover:bg-white/50"
+                index === currentSlide
+                  ? "bg-white"
+                  : "bg-white/30 hover:bg-white/50"
               }`}
             />
           ))}

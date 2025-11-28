@@ -2,20 +2,27 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, TrendingUp, Star, Play, Sparkles, Clock, Eye } from "lucide-react";
+import {
+  Users,
+  TrendingUp,
+  Star,
+  Play,
+  Sparkles,
+  Clock,
+  Eye,
+} from "lucide-react";
 import { livestreams, type LivestreamData } from "@/lib/livestreamData";
 
 export default function LivestreamPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | "live" | "recorded">("all");
 
-  const filteredStreams = livestreams.filter(stream => {
+  const filteredStreams = livestreams.filter((stream) => {
     if (filter === "live") return stream.isLive;
     if (filter === "recorded") return !stream.isLive;
     return true;
   });
 
-  
   const handleCardClick = (id: string) => {
     router.push(`/livestream/${id}`);
   };
@@ -25,8 +32,7 @@ export default function LivestreamPage() {
       {/* Header with Gradient Background */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 blur-3xl"></div>
-        <div className="relative max-w-[1400px] mx-auto px-6 py-4">
-        </div>
+        <div className="relative max-w-[1400px] mx-auto px-6 py-4"></div>
       </div>
 
       {/* Livestream Grid */}
@@ -43,15 +49,15 @@ export default function LivestreamPage() {
             >
               {/* Thumbnail */}
               <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
-                <img 
-                  src={stream.thumbnail} 
+                <img
+                  src={stream.thumbnail}
                   alt={stream.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
-                
+
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
+
                 {/* Live Badge */}
                 {stream.isLive && (
                   <div className="absolute top-3 left-3 bg-gradient-to-r from-red-600 to-red-500 px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold shadow-lg shadow-red-500/50">
@@ -105,11 +111,15 @@ export default function LivestreamPage() {
                 <div className="flex items-center justify-between text-xs pt-3 border-t border-[var(--border-color)]">
                   <div>
                     <p className="text-[var(--muted)] mb-1">Market Cap</p>
-                    <p className="text-green-400 font-bold text-sm">{stream.marketCap}</p>
+                    <p className="text-green-400 font-bold text-sm">
+                      {stream.marketCap}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-[var(--muted)] mb-1">ATH</p>
-                    <p className="text-[var(--foreground)] font-bold text-sm">{stream.ath}</p>
+                    <p className="text-[var(--foreground)] font-bold text-sm">
+                      {stream.ath}
+                    </p>
                   </div>
                 </div>
 
@@ -117,7 +127,7 @@ export default function LivestreamPage() {
                 {stream.tags && stream.tags.length > 0 && (
                   <div className="flex gap-2 mt-3 flex-wrap">
                     {stream.tags.map((tag, idx) => (
-                      <span 
+                      <span
                         key={idx}
                         className="px-2.5 py-1 bg-[var(--input-bg)] hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-xs text-[var(--muted)] border border-[var(--border-color)] transition-colors"
                       >

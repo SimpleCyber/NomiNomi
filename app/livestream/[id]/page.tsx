@@ -2,9 +2,13 @@ import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import LivestreamViewPage from "@/components/LivestreamViewPage";
 
-export default async function LivestreamView({ params }: { params: Promise<{ id: string }> }) {
+export default async function LivestreamView({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
-  
+
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Sidebar />

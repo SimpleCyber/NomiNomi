@@ -29,7 +29,8 @@ export const livestreams: LivestreamData[] = [
     ath: "$203.1K",
     tags: ["Trading", "Crypto"],
     startedAt: "2h ago",
-    description: "Live trading session covering the latest market trends and opportunities in crypto."
+    description:
+      "Live trading session covering the latest market trends and opportunities in crypto.",
   },
   {
     id: "2",
@@ -44,7 +45,7 @@ export const livestreams: LivestreamData[] = [
     ath: "$328.5K",
     tags: ["Analysis", "Live"],
     startedAt: "45m ago",
-    description: "Deep dive into market analysis and trading strategies."
+    description: "Deep dive into market analysis and trading strategies.",
   },
   {
     id: "3",
@@ -59,7 +60,8 @@ export const livestreams: LivestreamData[] = [
     ath: "$17.0M",
     tags: ["Markets", "Education"],
     startedAt: "1d ago",
-    description: "Educational content about market fundamentals and technical analysis."
+    description:
+      "Educational content about market fundamentals and technical analysis.",
   },
   {
     id: "4",
@@ -74,7 +76,7 @@ export const livestreams: LivestreamData[] = [
     ath: "$10.1M",
     tags: ["Gaming", "Entertainment"],
     startedAt: "3h ago",
-    description: "Gaming and entertainment with community interaction."
+    description: "Gaming and entertainment with community interaction.",
   },
   {
     id: "5",
@@ -89,7 +91,7 @@ export const livestreams: LivestreamData[] = [
     ath: "$12.6M",
     tags: ["Futures", "Trading"],
     startedAt: "5h ago",
-    description: "Futures trading strategies and market insights."
+    description: "Futures trading strategies and market insights.",
   },
   {
     id: "6",
@@ -104,7 +106,7 @@ export const livestreams: LivestreamData[] = [
     ath: "$82.4K",
     tags: ["Chill", "Music"],
     startedAt: "1h ago",
-    description: "Relaxing stream with music and community vibes."
+    description: "Relaxing stream with music and community vibes.",
   },
   {
     id: "7",
@@ -119,7 +121,7 @@ export const livestreams: LivestreamData[] = [
     ath: "$21.8K",
     tags: ["Tech", "Discussion"],
     startedAt: "12h ago",
-    description: "Technology discussions and industry insights."
+    description: "Technology discussions and industry insights.",
   },
   {
     id: "8",
@@ -134,6 +136,6 @@ export const livestreams: LivestreamData[] = [
     ath: "$81.8K",
     tags: ["Markets", "Asia"],
     startedAt: "30m ago",
-    description: "Asian market analysis and trading opportunities."
-  }
+    description: "Asian market analysis and trading opportunities.",
+  },
 ];

@@ -28,19 +28,29 @@ export default function SwapPage() {
                   </h1>
 
                   <p className="text-[var(--muted)] text-lg max-w-md">
-                    Trade your tokens instantly with the best rates powered by HoudiniSwap.
-                    Fast, secure, and decentralized.
+                    Trade your tokens instantly with the best rates powered by
+                    HoudiniSwap. Fast, secure, and decentralized.
                   </p>
                 </div>
 
                 {/* Info Section */}
                 <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl border border-blue-500/20 p-6">
-                  <h3 className="font-semibold text-[var(--foreground)] mb-2">Important Information</h3>
+                  <h3 className="font-semibold text-[var(--foreground)] mb-2">
+                    Important Information
+                  </h3>
                   <ul className="space-y-2 text-sm text-[var(--muted)]">
-                    <li>• Always verify the token contract address before swapping</li>
-                    <li>• Check the slippage tolerance to avoid failed transactions</li>
+                    <li>
+                      • Always verify the token contract address before swapping
+                    </li>
+                    <li>
+                      • Check the slippage tolerance to avoid failed
+                      transactions
+                    </li>
                     <li>• Ensure you have enough gas fees in your wallet</li>
-                    <li>• Double-check the swap details before confirming the transaction</li>
+                    <li>
+                      • Double-check the swap details before confirming the
+                      transaction
+                    </li>
                   </ul>
                 </div>
               </div>

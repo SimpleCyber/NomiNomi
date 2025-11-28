@@ -2,7 +2,6 @@
 
 @variant dark (&:where(.dark, .dark *));
 
-
 /* Hide scrollbar globally */
 ::-webkit-scrollbar {
   display: none;
@@ -13,12 +12,10 @@
   scrollbar-width: none; /* Firefox */
 }
 
-
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
-
 
 :root {
   --background: #f4f4f5;
@@ -46,17 +43,21 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: InterVariable, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  transition: color 0.3s, background-color 0.3s;
+  font-family:
+    InterVariable, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  transition:
+    color 0.3s,
+    background-color 0.3s;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
 .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }

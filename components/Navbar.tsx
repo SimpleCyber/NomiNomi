@@ -1,21 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Menu, PlusCircle, MessageCircle, Sprout, User } from "lucide-react";
+import {
+  Search,
+  Menu,
+  PlusCircle,
+  MessageCircle,
+  Sprout,
+  User,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 // Mock Data for Search
 const mockSearchResults = {
   coins: [
-    { name: "LIL", symbol: "LIL Bits", price: "$746.7K", age: "1 month", image: "/lil.png" },
-    { name: "BUTTCOIN", symbol: "The Next Bitcoin", price: "$540.5K", age: "10 months", image: "/buttcoin.png" },
-    { name: "BITCAT", symbol: "Bitcat", price: "$167.4K", age: "1 year", image: "/bitcat.png" },
-    { name: "SBR", symbol: "Strategic Bitcoin Reserve", price: "$141.6K", age: "1 year", image: "/sbr.png" },
+    {
+      name: "LIL",
+      symbol: "LIL Bits",
+      price: "$746.7K",
+      age: "1 month",
+      image: "/lil.png",
+    },
+    {
+      name: "BUTTCOIN",
+      symbol: "The Next Bitcoin",
+      price: "$540.5K",
+      age: "10 months",
+      image: "/buttcoin.png",
+    },
+    {
+      name: "BITCAT",
+      symbol: "Bitcat",
+      price: "$167.4K",
+      age: "1 year",
+      image: "/bitcat.png",
+    },
+    {
+      name: "SBR",
+      symbol: "Strategic Bitcoin Reserve",
+      price: "$141.6K",
+      age: "1 year",
+      image: "/sbr.png",
+    },
   ],
   users: [
     { name: "bitch", followers: "0 followers", image: "/pepe.png" },
     { name: "Bitcoin", followers: "12 followers", image: "/pepe-green.png" },
-  ]
+  ],
 };
 
 export default function Navbar() {
@@ -27,7 +58,10 @@ export default function Navbar() {
   // Close search results when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
         setShowResults(false);
       }
     }
@@ -40,7 +74,9 @@ export default function Navbar() {
       <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
         {/* Search Bar */}
         <div className="relative w-full max-w-md" ref={searchRef}>
-          <div className={`flex items-center bg-[var(--input-bg)] rounded-lg px-3 py-1.5 border transition-colors w-full ${showResults ? 'border-green-500 ring-1 ring-green-500' : 'border-[var(--border-color)] focus-within:border-blue-500'}`}>
+          <div
+            className={`flex items-center bg-[var(--input-bg)] rounded-lg px-3 py-1.5 border transition-colors w-full ${showResults ? "border-green-500 ring-1 ring-green-500" : "border-[var(--border-color)] focus-within:border-blue-500"}`}
+          >
             <Search className="w-4 h-4 text-[var(--muted)] mr-2" />
             <input
               type="text"
@@ -67,19 +103,30 @@ export default function Navbar() {
                 {/* Coins Section */}
                 <div className="p-2">
                   {mockSearchResults.coins.map((coin, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg cursor-pointer group">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg cursor-pointer group"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
-                           {/* Placeholder Image */}
-                           <div className="text-xs font-bold">{coin.name[0]}</div>
+                          {/* Placeholder Image */}
+                          <div className="text-xs font-bold">
+                            {coin.name[0]}
+                          </div>
                         </div>
                         <div>
-                          <div className="font-bold text-sm text-[var(--foreground)]">{coin.name}</div>
-                          <div className="text-xs text-[var(--muted)]">{coin.symbol}</div>
+                          <div className="font-bold text-sm text-[var(--foreground)]">
+                            {coin.name}
+                          </div>
+                          <div className="text-xs text-[var(--muted)]">
+                            {coin.symbol}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-sm text-[var(--foreground)]">{coin.price}</div>
+                        <div className="font-bold text-sm text-[var(--foreground)]">
+                          {coin.price}
+                        </div>
                         <div className="flex items-center justify-end gap-1 text-xs text-[var(--muted)] border border-[var(--border-color)] rounded px-1.5 py-0.5 mt-1">
                           <Sprout size={10} />
                           <span>{coin.age}</span>
@@ -91,16 +138,25 @@ export default function Navbar() {
 
                 {/* Users Section */}
                 <div className="p-2 border-t border-[var(--border-color)]">
-                  <h3 className="text-xs font-semibold text-[var(--muted)] px-2 mb-2">Users</h3>
+                  <h3 className="text-xs font-semibold text-[var(--muted)] px-2 mb-2">
+                    Users
+                  </h3>
                   {mockSearchResults.users.map((user, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg cursor-pointer group">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg cursor-pointer group"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
-                           <User size={16} />
+                          <User size={16} />
                         </div>
                         <div>
-                          <div className="font-bold text-sm text-[var(--foreground)]">{user.name}</div>
-                          <div className="text-xs text-[var(--muted)]">{user.followers}</div>
+                          <div className="font-bold text-sm text-[var(--foreground)]">
+                            {user.name}
+                          </div>
+                          <div className="text-xs text-[var(--muted)]">
+                            {user.followers}
+                          </div>
                         </div>
                       </div>
                       <button className="w-8 h-8 rounded-lg bg-green-500 hover:bg-green-600 flex items-center justify-center text-black transition-colors">
@@ -133,15 +189,32 @@ export default function Navbar() {
           </button>
         </div>
       </div>
-      
+
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="absolute top-16 left-0 w-full bg-[var(--background)] border-b border-[var(--border-color)] p-4 flex flex-col gap-4 md:hidden z-50">
-           <Link href="#" className="text-[var(--muted)] hover:text-[var(--foreground)]">Spot</Link>
-           <Link href="#" className="text-[var(--muted)] hover:text-[var(--foreground)]">Futures</Link>
-           <Link href="#" className="text-[var(--muted)] hover:text-[var(--foreground)]">Lend</Link>
-           <div className="h-px bg-[var(--border-color)] my-2"></div>
-           <button className="w-full py-2 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] rounded-lg">Log in</button>
+          <Link
+            href="#"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            Spot
+          </Link>
+          <Link
+            href="#"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            Futures
+          </Link>
+          <Link
+            href="#"
+            className="text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            Lend
+          </Link>
+          <div className="h-px bg-[var(--border-color)] my-2"></div>
+          <button className="w-full py-2 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] rounded-lg">
+            Log in
+          </button>
         </div>
       )}
     </nav>
