@@ -14,7 +14,6 @@ export interface LivestreamData {
   description?: string;
 }
 
-
 // Sample livestream data with YouTube videos
 export const livestreams: LivestreamData[] = [
   {

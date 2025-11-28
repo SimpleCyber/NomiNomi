@@ -76,7 +76,7 @@ export default function Sidebar() {
     { name: "Chat Friends", icon: MessageCircle, href: "#" },
     { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
     { name: "My Profile", icon: User, href: "#" },
-    { name: "Create coin", icon: PlusCircle, href: "#" },
+    { name: "Create coin", icon: PlusCircle, href: "/createcoin" },
   ];
 
   const bottomItems = [
