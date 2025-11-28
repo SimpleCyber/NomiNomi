@@ -73,15 +73,15 @@ export default function Sidebar() {
   const menuItems = [
     { name: "Home", icon: Home, href: "/" },
     { name: "Live stream", icon: Tv, href: "/livestream" },
-    { name: "Chat", icon: MessageCircle, href: "#" },
-    { name: "My Coins", icon: BitcoinIcon, href: "#" },
+    { name: "Chat Friends", icon: MessageCircle, href: "#" },
     { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
+    { name: "My Profile", icon: User, href: "#" },
     { name: "Create coin", icon: PlusCircle, href: "#" },
   ];
 
   const bottomItems = [
     { name: "Support", icon: HelpCircle, href: "/support" },
-    { name: "Profile", icon: User, href: "/profile" },
+    // { name: "Profile", icon: User, href: "/profile" },
   ];
 
   // Prevent hydration mismatch by only rendering after client-side load
