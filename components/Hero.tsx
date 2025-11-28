@@ -84,7 +84,7 @@ export default function Hero() {
 
   return (
     <div className="relative w-full max-w-[1400px] mx-auto mt-4 px-6">
-      <div className="relative h-[500px] md:h-[350px] w-full rounded-2xl overflow-hidden bg-[#141519] border border-white/5 group">
+      <div className="relative h-[200px] sm:h-[320px] md:h-[350px] w-full rounded-2xl overflow-hidden bg-[#141519] border border-white/5 group">
         {slides.map((slide, index) => (
           <div
             key={slide.id}
