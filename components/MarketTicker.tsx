@@ -236,7 +236,7 @@ export default function MarketTicker() {
 
       {viewMode === "list" ? (
         <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] p-6 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full min-w-[1200px] border-collapse">
                 <thead>
                 <tr className="text-left text-xs text-[var(--muted)] border-b border-[var(--border-color)]">

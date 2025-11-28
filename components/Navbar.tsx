@@ -62,8 +62,8 @@ export default function Navbar() {
 
           {/* Search Results Dropdown */}
           {showResults && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-[#1a1d21] rounded-xl border border-[var(--border-color)] shadow-2xl overflow-hidden">
-              <div className="max-h-[400px] overflow-y-auto">
+            <div className="absolute top-full left-0 w-full mt-2 bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] shadow-2xl overflow-hidden">
+              <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
                 {/* Coins Section */}
                 <div className="p-2">
                   {mockSearchResults.coins.map((coin, idx) => (
