@@ -10,6 +10,7 @@ import {
   User,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { SidebarContent } from "./Sidebar";
 
 // Mock Data for Search
 const mockSearchResults = {
@@ -71,8 +72,17 @@ export default function Navbar() {
 
   return (
     <nav className="bg-[var(--background)] text-[var(--foreground)] border-b border-[var(--border-color)] relative z-50">
+      
+
       <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
         {/* Search Bar */}
+        <button
+            className="md:hidden text-[var(--muted)] hover:text-[var(--foreground)] mr-3"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <img src="./image.png" alt="" className="w-7 h-7" />
+          </button>
+          
         <div className="relative w-full max-w-md" ref={searchRef}>
           <div
             className={`flex items-center bg-[var(--input-bg)] rounded-lg px-3 py-1.5 border transition-colors w-full ${showResults ? "border-green-500 ring-1 ring-green-500" : "border-[var(--border-color)] focus-within:border-blue-500"}`}
@@ -170,7 +180,7 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-row-reverse flex">
           <div className="hidden md:flex items-center gap-3">
             <button className="px-4 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors flex items-center ">
               <PlusCircle className="w-4 h-4 mr-2" />
@@ -181,40 +191,27 @@ export default function Navbar() {
             </button>
           </div>
 
-          <button
-            className="md:hidden text-[var(--muted)] hover:text-[var(--foreground)]"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Sidebar */}
       {isMenuOpen && (
-        <div className="absolute top-16 left-0 w-full bg-[var(--background)] border-b border-[var(--border-color)] p-4 flex flex-col gap-4 md:hidden z-50">
-          <Link
-            href="#"
-            className="text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            Spot
-          </Link>
-          <Link
-            href="#"
-            className="text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            Futures
-          </Link>
-          <Link
-            href="#"
-            className="text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            Lend
-          </Link>
-          <div className="h-px bg-[var(--border-color)] my-2"></div>
-          <button className="w-full py-2 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] rounded-lg">
-            Log in
-          </button>
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsMenuOpen(false)}
+          />
+
+          {/* Sidebar */}
+          <div className="relative w-64 h-full shadow-xl animate-in slide-in-from-left duration-300">
+            <SidebarContent
+              isCollapsed={false}
+              isMobile={true}
+              onClose={() => setIsMenuOpen(false)}
+            />
+          </div>
         </div>
       )}
     </nav>

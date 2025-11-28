@@ -25,46 +25,19 @@ import Link from "next/link";
 
 import { usePathname } from "next/navigation";
 
-export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+export function SidebarContent({
+  isCollapsed,
+  toggleSidebar,
+  isMobile = false,
+  onClose,
+}: {
+  isCollapsed: boolean;
+  toggleSidebar?: () => void;
+  isMobile?: boolean;
+  onClose?: () => void;
+}) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-
-  // Load collapsed state from localStorage on mount
-  useEffect(() => {
-    setMounted(true);
-    const savedState = localStorage.getItem("sidebarCollapsed");
-    const collapsed = savedState === "true";
-
-    if (savedState !== null) {
-      setIsCollapsed(collapsed);
-    }
-
-    // Set initial CSS variable
-    document.documentElement.style.setProperty(
-      "--sidebar-width",
-      collapsed ? "4rem" : "16rem",
-    );
-    setIsLoaded(true);
-  }, []);
-
-  // Update CSS variable when state changes
-  useEffect(() => {
-    if (isLoaded) {
-      document.documentElement.style.setProperty(
-        "--sidebar-width",
-        isCollapsed ? "4rem" : "16rem",
-      );
-    }
-  }, [isCollapsed, isLoaded]);
-
-  const toggleSidebar = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    localStorage.setItem("sidebarCollapsed", String(newState));
-  };
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -84,18 +57,8 @@ export default function Sidebar() {
     // { name: "Profile", icon: User, href: "/profile" },
   ];
 
-  // Prevent hydration mismatch by only rendering after client-side load
-  if (!isLoaded || !mounted) {
-    return null;
-  }
-
   return (
-    <div
-      className={`
-        hidden md:flex flex-col fixed top-0 left-0 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] transition-all duration-300 ease-in-out z-40
-        ${isCollapsed ? "w-16" : "w-64"}
-      `}
-    >
+    <div className="flex flex-col h-full bg-[var(--sidebar-bg)]">
       {/* Header / Toggle */}
       <div
         className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} p-4 h-16 border-b border-[var(--sidebar-border)]`}
@@ -121,9 +84,17 @@ export default function Sidebar() {
             />
           </div>
         )}
-        {!isCollapsed && (
+        {!isCollapsed && !isMobile && (
           <button
             onClick={toggleSidebar}
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
+        {isMobile && (
+          <button
+            onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
           >
             <ChevronLeft size={20} />
@@ -132,7 +103,7 @@ export default function Sidebar() {
       </div>
 
       {/* Main Menu */}
-      <div className="flex-1 py-4 flex flex-col gap-2 px-2">
+      <div className="flex-1 py-4 flex flex-col gap-2 px-2 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -141,6 +112,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={isMobile ? onClose : undefined}
               className={`group flex items-center gap-3 p-2 rounded-lg transition-colors relative
                 ${
                   isActive
@@ -199,6 +171,7 @@ export default function Sidebar() {
           <Link
             key={item.name}
             href={item.href}
+            onClick={isMobile ? onClose : undefined}
             className="group flex items-center gap-3 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors relative"
           >
             <div className="min-w-[24px] flex justify-center">
@@ -220,6 +193,62 @@ export default function Sidebar() {
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+export default function Sidebar() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Load collapsed state from localStorage on mount
+  useEffect(() => {
+    setMounted(true);
+    const savedState = localStorage.getItem("sidebarCollapsed");
+    const collapsed = savedState === "true";
+
+    if (savedState !== null) {
+      setIsCollapsed(collapsed);
+    }
+
+    // Set initial CSS variable
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      collapsed ? "4rem" : "16rem",
+    );
+    setIsLoaded(true);
+  }, []);
+
+  // Update CSS variable when state changes
+  useEffect(() => {
+    if (isLoaded) {
+      document.documentElement.style.setProperty(
+        "--sidebar-width",
+        isCollapsed ? "4rem" : "16rem",
+      );
+    }
+  }, [isCollapsed, isLoaded]);
+
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem("sidebarCollapsed", String(newState));
+  };
+
+  // Prevent hydration mismatch by only rendering after client-side load
+  if (!isLoaded || !mounted) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`
+        hidden md:flex flex-col fixed top-0 left-0 h-screen bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] transition-all duration-300 ease-in-out z-40
+        ${isCollapsed ? "w-16" : "w-64"}
+      `}
+    >
+      <SidebarContent isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
     </div>
   );
 }
