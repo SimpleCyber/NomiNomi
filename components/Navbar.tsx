@@ -50,7 +50,6 @@ export default function Navbar() {
            <Link href="#" className="text-[var(--muted)] hover:text-[var(--foreground)]">Lend</Link>
            <div className="h-px bg-[var(--border-color)] my-2"></div>
            <button className="w-full py-2 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] rounded-lg">Log in</button>
-           <button className="w-full py-2 text-sm font-medium text-white bg-blue-600 rounded-lg">Sign up</button>
         </div>
       )}
     </nav>

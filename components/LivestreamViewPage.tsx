@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Users, TrendingUp, Star, Share2, Bell, MoreVertical, Clock, Eye, MessageCircle, ThumbsUp, DollarSign } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, Star, Share2, Bell, MoreVertical, Clock, Eye, MessageCircle, DollarSign, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { livestreams, type LivestreamData } from "@/lib/livestreamData";
+import { livestreams } from "@/lib/livestreamData";
 
 interface LivestreamViewPageProps {
   streamId: string;
@@ -17,12 +17,12 @@ export default function LivestreamViewPage({ streamId }: LivestreamViewPageProps
 
   if (!stream) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-[calc(100vh-64px)]">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">Stream not found</h2>
           <button 
             onClick={() => router.push("/livestream")}
-            className="text-blue-400 hover:text-blue-300 transition-colors"
+            className="text-blue-500 hover:text-blue-400 transition-colors font-medium"
           >
             Go back to livestreams
           </button>
@@ -32,29 +32,27 @@ export default function LivestreamViewPage({ streamId }: LivestreamViewPageProps
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      {/* Back Button Header */}
-      <div className=" border-[var(--border-color)] bg-[var(--background)] sticky top-0 z-10">
-        <div className="max-w-[1800px] mx-auto px-6 py-4">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pb-10">
+      {/* Header / Breadcrumb */}
+      <div className="border-b border-[var(--border-color)] bg-[var(--background)]/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center">
           <button
             onClick={() => router.push("/livestream")}
-            className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors group"
+            className="flex items-center gap-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors group text-sm font-medium"
           >
-            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 group-hover:bg-black/10 dark:group-hover:bg-white/10 flex items-center justify-center transition-colors">
-              <ArrowLeft size={18} />
-            </div>
-            <span className="text-sm font-medium">Back to Livestreams</span>
+            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Livestreams</span>
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-[1800px] mx-auto px-6 py-6">
+      <div className="max-w-[1400px] mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Video Player and Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Video Player */}
-            <div className="relative aspect-video bg-black rounded-2xl overflow-hidden border border-[var(--border-color)] shadow-2xl">
+            <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-[var(--border-color)] shadow-2xl group">
               <iframe
                 src={stream.videoUrl}
                 className="w-full h-full"
@@ -64,119 +62,122 @@ export default function LivestreamViewPage({ streamId }: LivestreamViewPageProps
               
               {/* Live Indicator Overlay */}
               {stream.isLive && (
-                <div className="absolute top-4 left-4 bg-gradient-to-r from-red-600 to-red-500 px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-lg shadow-red-500/50 text-white">
-                  <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></span>
+                <div className="absolute top-4 left-4 bg-red-600/90 backdrop-blur-md px-3 py-1.5 rounded-md flex items-center gap-2 text-xs font-bold text-white shadow-lg animate-pulse">
+                  <span className="w-2 h-2 bg-white rounded-full"></span>
                   LIVE
                 </div>
               )}
             </div>
 
             {/* Stream Title and Actions */}
-            <div className="bg-[var(--card-bg)] rounded-2xl p-6 border border-[var(--border-color)]">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex-1">
-                  <h1 className="text-2xl md:text-3xl font-bold text-[var(--foreground)] mb-2">
-                    {stream.title}
-                  </h1>
-                  <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
-                    <div className="flex items-center gap-1.5">
-                      <Eye size={16} />
-                      <span>{stream.viewers} viewers</span>
-                    </div>
-                    {stream.startedAt && (
-                      <>
-                        <span>•</span>
-                        <div className="flex items-center gap-1.5">
-                          <Clock size={16} />
-                          <span>{stream.startedAt}</span>
-                        </div>
-                      </>
-                    )}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2 leading-tight">
+                  {stream.title}
+                </h1>
+                <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
+                  <div className="flex items-center gap-1.5 text-red-500 font-medium">
+                    <Eye size={16} />
+                    <span>{stream.viewers.toLocaleString()} watching</span>
                   </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  <button className="w-10 h-10 rounded-lg bg-[var(--input-bg)] hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center transition-colors border border-[var(--border-color)]">
-                    <Share2 size={18} className="text-[var(--muted)]" />
-                  </button>
-                  <button className="w-10 h-10 rounded-lg bg-[var(--input-bg)] hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center transition-colors border border-[var(--border-color)]">
-                    <Bell size={18} className="text-[var(--muted)]" />
-                  </button>
-                  <button className="w-10 h-10 rounded-lg bg-[var(--input-bg)] hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center transition-colors border border-[var(--border-color)]">
-                    <MoreVertical size={18} className="text-[var(--muted)]" />
-                  </button>
+                  {stream.startedAt && (
+                    <>
+                      <span className="w-1 h-1 bg-[var(--muted)] rounded-full"></span>
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={16} />
+                        <span>Started {stream.startedAt}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Streamer Info */}
-              <div className="flex items-center gap-4 pt-4 border-t border-[var(--border-color)]">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-400 via-blue-500 to-purple-500 rounded-xl flex items-center justify-center text-xl font-bold shadow-lg flex-shrink-0 text-white">
-                  {stream.streamer.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-[var(--foreground)] text-lg">{stream.streamer}</h3>
-                  <p className="text-sm text-[var(--muted)]">{stream.streamerHandle}</p>
-                </div>
-                <button className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 rounded-lg font-medium transition-all shadow-lg shadow-green-500/20 text-white">
-                  Follow
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button className="h-9 px-4 rounded-lg bg-[var(--input-bg)] hover:bg-[var(--border-color)] flex items-center gap-2 text-sm font-medium transition-colors border border-[var(--border-color)]">
+                  <Share2 size={16} />
+                  <span>Share</span>
+                </button>
+                <button className="h-9 w-9 rounded-lg bg-[var(--input-bg)] hover:bg-[var(--border-color)] flex items-center justify-center transition-colors border border-[var(--border-color)]">
+                  <MoreVertical size={16} />
                 </button>
               </div>
-
-              {/* Tags */}
-              {stream.tags && stream.tags.length > 0 && (
-                <div className="flex gap-2 mt-4 flex-wrap">
-                  {stream.tags.map((tag, idx) => (
-                    <span 
-                      key={idx}
-                      className="px-3 py-1.5 bg-[var(--input-bg)] hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-sm text-[var(--muted)] border border-[var(--border-color)] transition-colors"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Tabs for Info/Description */}
-            <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] overflow-hidden">
+            {/* Streamer Info & Tabs */}
+            <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] overflow-hidden">
+               {/* Streamer Header */}
+              <div className="p-4 flex items-center justify-between border-b border-[var(--border-color)]">
+                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-inner">
+                      {stream.streamer.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[var(--foreground)]">{stream.streamer}</h3>
+                      <p className="text-xs text-[var(--muted)]">{stream.streamerHandle}</p>
+                    </div>
+                 </div>
+                 <button className="px-4 py-1.5 bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 rounded-lg text-sm font-semibold transition-opacity">
+                    Follow
+                 </button>
+              </div>
+
+              {/* Tabs */}
               <div className="flex border-b border-[var(--border-color)]">
                 <button
                   onClick={() => setActiveTab("info")}
-                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors relative ${
                     activeTab === "info"
-                      ? "text-[var(--foreground)] bg-black/5 dark:bg-white/5 border-b-2 border-green-500"
-                      : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5"
+                      ? "text-[var(--foreground)]"
+                      : "text-[var(--muted)] hover:text-[var(--foreground)]"
                   }`}
                 >
                   Information
+                  {activeTab === "info" && (
+                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-500"></div>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab("chat")}
-                  className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors relative ${
                     activeTab === "chat"
-                      ? "text-[var(--foreground)] bg-black/5 dark:bg-white/5 border-b-2 border-green-500"
-                      : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-black/5 dark:hover:bg-white/5"
+                      ? "text-[var(--foreground)]"
+                      : "text-[var(--muted)] hover:text-[var(--foreground)]"
                   }`}
                 >
-                  Chat
+                  Live Chat
+                   {activeTab === "chat" && (
+                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-500"></div>
+                  )}
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-6 min-h-[200px]">
                 {activeTab === "info" ? (
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">About this stream</h3>
-                      <p className="text-[var(--muted)] leading-relaxed">
-                        {stream.description || "No description available."}
+                      <h4 className="text-sm font-semibold text-[var(--foreground)] mb-2">About this stream</h4>
+                      <p className="text-sm text-[var(--muted)] leading-relaxed">
+                        {stream.description || "No description available for this stream."}
                       </p>
                     </div>
+                    {stream.tags && stream.tags.length > 0 && (
+                        <div className="flex gap-2 flex-wrap pt-2">
+                        {stream.tags.map((tag, idx) => (
+                            <span 
+                            key={idx}
+                            className="px-2.5 py-1 bg-[var(--input-bg)] rounded-md text-xs text-[var(--muted)] border border-[var(--border-color)]"
+                            >
+                            #{tag}
+                            </span>
+                        ))}
+                        </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-center text-[var(--muted)] py-8">
-                    <MessageCircle size={48} className="mx-auto mb-3 opacity-50" />
-                    <p>Chat feature coming soon</p>
+                  <div className="flex flex-col items-center justify-center h-full text-[var(--muted)] py-8">
+                    <MessageCircle size={32} className="mb-2 opacity-50" />
+                    <p className="text-sm">Chat is currently disabled</p>
                   </div>
                 )}
               </div>
@@ -185,79 +186,97 @@ export default function LivestreamViewPage({ streamId }: LivestreamViewPageProps
 
           {/* Right Column - Stats and Trading */}
           <div className="space-y-6">
-            {/* Market Stats */}
-            <div className="bg-[var(--card-bg)] rounded-2xl p-6 border border-[var(--border-color)]">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Market Stats</h3>
+            {/* Market Stats Card */}
+            <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-5">
+              <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
+                <TrendingUp size={16} className="text-blue-500" />
+                Market Statistics
+              </h3>
               
-              <div className="space-y-4">
-                <div className="bg-[var(--input-bg)] rounded-xl p-4 border border-[var(--border-color)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                      <Users size={20} className="text-green-400" />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-[var(--input-bg)] rounded-lg border border-[var(--border-color)]">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-500/10 rounded-md text-green-500">
+                            <Users size={16} />
+                        </div>
+                        <span className="text-sm text-[var(--muted)]">Viewers</span>
                     </div>
-                    <p className="text-sm text-[var(--muted)]">Current Viewers</p>
-                  </div>
-                  <p className="text-2xl font-bold text-green-400">{stream.viewers}</p>
+                    <span className="text-sm font-bold text-[var(--foreground)]">{stream.viewers}</span>
                 </div>
 
-                <div className="bg-[var(--input-bg)] rounded-xl p-4 border border-[var(--border-color)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                      <TrendingUp size={20} className="text-blue-400" />
+                <div className="flex items-center justify-between p-3 bg-[var(--input-bg)] rounded-lg border border-[var(--border-color)]">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 rounded-md text-blue-500">
+                            <TrendingUp size={16} />
+                        </div>
+                        <span className="text-sm text-[var(--muted)]">Market Cap</span>
                     </div>
-                    <p className="text-sm text-[var(--muted)]">Market Cap</p>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-400">{stream.marketCap}</p>
+                    <span className="text-sm font-bold text-[var(--foreground)]">{stream.marketCap}</span>
                 </div>
 
-                <div className="bg-[var(--input-bg)] rounded-xl p-4 border border-[var(--border-color)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                      <Star size={20} className="text-purple-400" />
+                <div className="flex items-center justify-between p-3 bg-[var(--input-bg)] rounded-lg border border-[var(--border-color)]">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/10 rounded-md text-purple-500">
+                            <Star size={16} />
+                        </div>
+                        <span className="text-sm text-[var(--muted)]">ATH</span>
                     </div>
-                    <p className="text-sm text-[var(--muted)]">All Time High</p>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-400">{stream.ath}</p>
+                    <span className="text-sm font-bold text-[var(--foreground)]">{stream.ath}</span>
                 </div>
               </div>
             </div>
 
             {/* Trading Panel */}
-            <div className="bg-[var(--card-bg)] rounded-2xl p-6 border border-[var(--border-color)]">
-              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Trade</h3>
+            <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] overflow-hidden">
+              <div className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                 <h3 className="text-sm font-semibold text-[var(--foreground)]">Trade</h3>
+                 <div className="flex gap-2">
+                    <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded">Long</span>
+                    <span className="text-xs bg-[var(--input-bg)] text-[var(--muted)] px-2 py-0.5 rounded">Short</span>
+                 </div>
+              </div>
               
-              <div className="space-y-4">
+              <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-sm text-[var(--muted)] mb-2 block">Amount</label>
-                  <div className="bg-[var(--input-bg)] rounded-lg p-3 border border-[var(--border-color)] flex items-center gap-2">
-                    <DollarSign size={18} className="text-[var(--muted)]" />
+                  <div className="flex justify-between text-xs text-[var(--muted)] mb-1.5">
+                    <label>Amount</label>
+                    <span>Balance: 0.00 SOL</span>
+                  </div>
+                  <div className="bg-[var(--input-bg)] rounded-lg px-3 py-2.5 border border-[var(--border-color)] flex items-center gap-2 focus-within:border-blue-500 transition-colors">
                     <input
                       type="text"
                       placeholder="0.00"
-                      className="bg-transparent border-none outline-none text-[var(--foreground)] w-full"
+                      className="bg-transparent border-none outline-none text-[var(--foreground)] w-full font-mono text-sm"
                     />
-                    <span className="text-sm text-[var(--muted)]">SOL</span>
+                    <div className="flex items-center gap-1 pl-2 border-l border-[var(--border-color)]">
+                        <span className="text-xs font-bold text-[var(--foreground)]">SOL</span>
+                        <ChevronDown size={12} className="text-[var(--muted)]" />
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg font-medium transition-all shadow-lg shadow-green-500/20 text-white">
+                  <button className="py-2.5 bg-green-500 hover:bg-green-600 rounded-lg font-semibold text-sm text-white transition-colors shadow-lg shadow-green-500/20">
                     Buy
                   </button>
-                  <button className="px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg font-medium transition-all shadow-lg shadow-red-500/20 text-white">
+                  <button className="py-2.5 bg-red-500 hover:bg-red-600 rounded-lg font-semibold text-sm text-white transition-colors shadow-lg shadow-red-500/20">
                     Sell
                   </button>
                 </div>
 
                 <div className="pt-4 border-t border-[var(--border-color)]">
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-2 text-xs">
                     <div className="flex justify-between text-[var(--muted)]">
-                      <span>Position</span>
-                      <span className="text-[var(--foreground)] font-medium">0 tokens</span>
+                      <span>Entry Price</span>
+                      <span className="text-[var(--foreground)] font-mono">-</span>
                     </div>
                     <div className="flex justify-between text-[var(--muted)]">
-                      <span>Profit/Loss</span>
-                      <span className="text-green-400 font-medium">+$0.00</span>
+                      <span>Liquidation Price</span>
+                      <span className="text-[var(--foreground)] font-mono">-</span>
+                    </div>
+                     <div className="flex justify-between text-[var(--muted)]">
+                      <span>Est. Fee</span>
+                      <span className="text-[var(--foreground)] font-mono">0.00 SOL</span>
                     </div>
                   </div>
                 </div>
@@ -265,15 +284,17 @@ export default function LivestreamViewPage({ streamId }: LivestreamViewPageProps
             </div>
 
             {/* Bonding Curve Progress */}
-            <div className="bg-[var(--card-bg)] rounded-2xl p-6 border border-[var(--border-color)]">
+            <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-[var(--foreground)]">Bonding Curve Progress</h3>
-                <span className="text-sm font-bold text-green-400">100.0%</span>
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">Bonding Curve</h3>
+                <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">100%</span>
               </div>
               <div className="w-full h-2 bg-[var(--input-bg)] rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full" style={{ width: "100%" }}></div>
+                <div className="h-full bg-gradient-to-r from-green-400 to-emerald-600 rounded-full w-full"></div>
               </div>
-              <p className="text-xs text-[var(--muted)] mt-2">Coin has graduated!</p>
+              <p className="text-xs text-[var(--muted)] mt-3">
+                This coin has graduated from the bonding curve and is now trading on the open market.
+              </p>
             </div>
           </div>
         </div>

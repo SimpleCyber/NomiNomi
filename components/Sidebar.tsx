@@ -23,11 +23,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { usePathname } from "next/navigation";
+
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
 
   // Load collapsed state from localStorage on mount
   useEffect(() => {
@@ -88,8 +91,8 @@ export default function Sidebar() {
       `}
     >
       {/* Header / Toggle */}
-      <div className="flex items-center justify-between p-4 h-16 border-b border-[var(--sidebar-border)]">
-        {!isCollapsed && (
+      <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} p-4 h-16 border-b border-[var(--sidebar-border)]`}>
+        {!isCollapsed ? (
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center">
               <img src="/image.png" alt="" />
@@ -98,41 +101,55 @@ export default function Sidebar() {
               NomiNomi
             </span>
           </div>
+        ) : (
+           <div className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer" onClick={toggleSidebar}>
+              <img src="/image.png" alt="" className="w-full h-full object-contain"/>
+            </div>
         )}
-        <button 
-          onClick={toggleSidebar}
-          className={`p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors ${isCollapsed ? "mx-auto" : ""}`}
-        >
-          {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-        </button>
+        {!isCollapsed && (
+          <button 
+            onClick={toggleSidebar}
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
       </div>
 
       {/* Main Menu */}
       <div className="flex-1 py-4 flex flex-col gap-2 px-2">
-        {menuItems.map((item) => (
-          <Link 
-            key={item.name} 
-            href={item.href}
-            className="group flex items-center gap-3 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors relative"
-          >
-            <div className="min-w-[24px] flex justify-center">
-              <item.icon size={20} />
-            </div>
-            
-            {!isCollapsed && (
-              <span className="whitespace-nowrap overflow-hidden text-sm font-medium">
-                {item.name}
-              </span>
-            )}
-
-            {/* Tooltip for collapsed state */}
-            {isCollapsed && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                {item.name}
+        {menuItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+          return (
+            <Link 
+              key={item.name} 
+              href={item.href}
+              className={`group flex items-center gap-3 p-2 rounded-lg transition-colors relative
+                ${isActive 
+                  ? "bg-blue-500/10 text-blue-500" 
+                  : "hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
+                }
+              `}
+            >
+              <div className="min-w-[24px] flex justify-center">
+                <item.icon size={20} />
               </div>
-            )}
-          </Link>
-        ))}
+              
+              {!isCollapsed && (
+                <span className="whitespace-nowrap overflow-hidden text-sm font-medium">
+                  {item.name}
+                </span>
+              )}
+
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                  {item.name}
+                </div>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Bottom Section */}
