@@ -15,6 +15,7 @@ export default function LivestreamPage() {
     return true;
   });
 
+  
   const handleCardClick = (id: string) => {
     router.push(`/livestream/${id}`);
   };
