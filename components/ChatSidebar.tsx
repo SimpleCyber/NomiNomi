@@ -125,12 +125,12 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
 
   return (
     <div className="w-full md:w-80 border-r border-[var(--border-color)] bg-[var(--card-bg)] flex flex-col h-full">
-      <div className="p-4 border-b border-[var(--border-color)]">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Messages</h2>
+      <div className="p-[17.5px] border-b border-[var(--border-color)]">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">Messages</h1>
         </div>
 
-        <div className="relative">
+        {/* <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" size={18} />
           <input
             type="text"
@@ -139,7 +139,7 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[var(--input-bg)] text-[var(--foreground)] pl-10 pr-4 py-2 rounded-lg border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] placeholder-[var(--muted-foreground)]"
           />
-        </div>
+        </div> */}
       </div>
 
       <div className="flex-1 overflow-y-auto">
