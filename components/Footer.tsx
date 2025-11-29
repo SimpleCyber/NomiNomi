@@ -100,7 +100,7 @@ export default function Footer() {
                     href="#"
                     className="hover:text-[var(--foreground)] transition-colors"
                   >
-                    Solana Wallet
+                    Cardano Wallet
                   </Link>
                 </li>
                 <li>
@@ -132,7 +132,7 @@ export default function Footer() {
                     href="#"
                     className="hover:text-[var(--foreground)] transition-colors"
                   >
-                    Solana Price
+                    Cardano Price
                   </Link>
                 </li>
                 <li>

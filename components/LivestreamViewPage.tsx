@@ -281,7 +281,7 @@ export default function LivestreamViewPage({
                 <div>
                   <div className="flex justify-between text-xs text-[var(--muted)] mb-1.5">
                     <label>Amount</label>
-                    <span>Balance: 0.00 SOL</span>
+                    <span>Balance: 0.00 ADA</span>
                   </div>
                   <div className="bg-[var(--input-bg)] rounded-lg px-3 py-2.5 border border-[var(--border-color)] flex items-center gap-2 focus-within:border-blue-500 transition-colors">
                     <input
@@ -291,7 +291,7 @@ export default function LivestreamViewPage({
                     />
                     <div className="flex items-center gap-1 pl-2 border-l border-[var(--border-color)]">
                       <span className="text-xs font-bold text-[var(--foreground)]">
-                        SOL
+                        ADA
                       </span>
                       <ChevronDown size={12} className="text-[var(--muted)]" />
                     </div>
@@ -324,7 +324,7 @@ export default function LivestreamViewPage({
                     <div className="flex justify-between text-[var(--muted)]">
                       <span>Est. Fee</span>
                       <span className="text-[var(--foreground)] font-mono">
-                        0.00 SOL
+                        0.00 ADA
                       </span>
                     </div>
                   </div>
