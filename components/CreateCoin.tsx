@@ -8,8 +8,16 @@ import {
   ChevronUp,
   Info,
   Activity,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
+import { uploadToIPFS, uploadJSONToIPFS } from "../lib/ipfs";
+import { db } from "../lib/firebase";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { useWallet } from "../context/WalletContext";
+import { mintToken } from "../lib/transactions";
+import { toast } from "sonner";
 
 export default function CreateCoin() {
   const [name, setName] = useState("");
@@ -22,16 +30,136 @@ export default function CreateCoin() {
   const [showSocials, setShowSocials] = useState(false);
   const [showBannerUpload, setShowBannerUpload] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { walletAddress, isConnected, walletName } = useWallet();
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+
+
+  const checkAntiRugLimit = async (address: string) => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const q = query(
+      collection(db, "memecoins"),
+      where("creatorAddress", "==", address),
+      where("createdAt", ">=", Timestamp.fromDate(thirtyDaysAgo))
+    );
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.size;
+  };
+
+  const computeMetadataHash = async (metadata: any) => {
+    const jsonString = JSON.stringify(metadata);
+    const encoder = new TextEncoder();
+    const data = encoder.encode(jsonString);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    return hashHex;
+  };
+
+  const handleCreateCoin = async () => {
+    if (!isConnected || !walletAddress) {
+      setError("Please connect your wallet first.");
+      return;
+    }
+
+    if (!name || !ticker || !description || !imageFile) {
+      setError("Please fill in all required fields and upload an image.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // 0. Anti-Rug Check
+      const createdCount = await checkAntiRugLimit(walletAddress);
+      if (createdCount >= 30) {
+        throw new Error("Anti-Rug Policy: You have created 30 coins in the last 30 days. Please wait.");
+      }
+
+      // 1. Upload image to IPFS
+      const imageIpfsUrl = await uploadToIPFS(imageFile);
+
+      // 2. Create metadata
+      const metadata = {
+        name,
+        symbol: ticker,
+        description,
+        image: imageIpfsUrl,
+        website,
+        twitter,
+        telegram,
+      };
+
+      // 3. Compute Hash
+      const metadataHash = await computeMetadataHash(metadata);
+
+      // 4. Save to Firestore
+      const docRef = await addDoc(collection(db, "memecoins"), {
+        ...metadata,
+        metadataHash,
+        maxSupply: 1000000,
+        fundingGoalAda: 5,
+        status: "FUNDING", // Initial status
+        isPaused: false,
+        createdAt: serverTimestamp(),
+        creatorAddress: walletAddress,
+      });
+
+      console.log("Token created with ID: ", docRef.id);
+
+      // 5. Trigger On-Chain Transaction
+      // Note: In a real app, we might want to do this BEFORE Firestore or handle failures gracefully.
+      // For now, we'll try to mint. If it fails, the Firestore doc exists but might be invalid on-chain.
+      // We can update the doc status to "MINTED" after success.
+      
+      try {
+        const cardano = (window as any).cardano;
+        if (!walletName) throw new Error("Wallet not connected properly");
+        const walletApi = await cardano[walletName].enable();
+        
+        const txHash = await mintToken(walletApi, metadata, metadataHash);
+        console.log("Mint Tx Hash:", txHash);
+        
+        // Update Firestore with Tx Hash
+        // await updateDoc(docRef, { txHash, status: "MINTED" });
+        
+      } catch (txError) {
+        console.error("Transaction failed:", txError);
+        // await deleteDoc(docRef); // Optional rollback
+        toast.error("On-chain transaction failed. Please try again.");
+        throw new Error("On-chain transaction failed. Please try again.");
+      }
+      
+      // Redirect to token page
+      router.push(`/token/${docRef.id}`);
+      toast.success("Token created successfully!");
+
+    } catch (err: any) {
+      console.error("Error creating coin:", err);
+      setError(err.message || "Failed to create coin.");
+      toast.error(err.message || "Failed to create coin.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -295,8 +423,25 @@ export default function CreateCoin() {
           </p>
         </div>
 
-        <button className="w-full md:w-auto bg-violet-400 text-black font-bold py-3 px-8 rounded-lg hover:bg-violet-500 transition-colors">
-          Create coin
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-lg text-sm mb-4">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleCreateCoin}
+          disabled={isLoading}
+          className="w-full md:w-auto bg-violet-400 text-black font-bold py-3 px-8 rounded-lg hover:bg-violet-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="animate-spin" size={20} />
+              Creating...
+            </>
+          ) : (
+            "Create coin"
+          )}
         </button>
       </div>
 

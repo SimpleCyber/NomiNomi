@@ -8,12 +8,19 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { SidebarContent } from "./Sidebar";
 import SearchResults from "./SearchResults";
+import { useWallet } from "@/context/WalletContext";
+import { User, ChevronDown } from "lucide-react";
+import WalletModal from "./WalletModal";
+import WalletInstallGuide from "./WalletInstallGuide";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isConnected, walletAddress, connectWallet, showInstallGuide, setShowInstallGuide } = useWallet();
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const walletDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -28,6 +35,20 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Close wallet install guide when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        walletDropdownRef.current &&
+        !walletDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowInstallGuide(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [setShowInstallGuide]);
 
   return (
     <nav className="bg-[var(--background)] text-[var(--foreground)] border-b border-[var(--border-color)] relative z-50">
@@ -76,12 +97,41 @@ export default function Navbar() {
               <PlusCircle className="w-4 h-4 mr-2" />
               Create Coin
             </button>
-            <button className="px-4 py-1.5 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors border border-[var(--border-color)]">
-              Log in
-            </button>
+            {isConnected ? (
+              <button
+                onClick={() => setIsWalletModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors border border-[var(--border-color)]"
+              >
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white">
+                  <User size={14} />
+                </div>
+                <span>
+                  {walletAddress ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-5)}` : "Connected"}
+                </span>
+                <ChevronDown size={14} className="text-[var(--muted)]" />
+              </button>
+            ) : (
+              <div className="relative" ref={walletDropdownRef}>
+                <button
+                  onClick={connectWallet}
+                  className="px-4 py-1.5 text-sm font-medium text-[var(--foreground)] bg-[var(--input-bg)] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors border border-[var(--border-color)]"
+                >
+                  Connect Wallet
+                </button>
+                <WalletInstallGuide
+                  isOpen={showInstallGuide}
+                  onClose={() => setShowInstallGuide(false)}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <WalletModal 
+        isOpen={isWalletModalOpen} 
+        onClose={() => setIsWalletModalOpen(false)} 
+      />
 
       {/* Mobile Sidebar */}
       {isMenuOpen && (
