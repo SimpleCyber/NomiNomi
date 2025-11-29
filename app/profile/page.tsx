@@ -28,6 +28,8 @@ export default function ProfilePage() {
     const [heldTokens, setHeldTokens] = useState<any[]>([]);
     const [adaBalance, setAdaBalance] = useState<string>("0.00");
     const [loading, setLoading] = useState(true);
+    const [balancesLoading, setBalancesLoading] = useState(false);
+    const [balancesFetched, setBalancesFetched] = useState(false);
 
     const tabs = [
         "Balances",
@@ -52,12 +54,18 @@ export default function ProfilePage() {
         return `${Math.floor(diffDays / 365)}y`;
     };
 
-    // Fetch wallet balances (ADA + Native Tokens)
+    // Fetch wallet balances (ADA + Native Tokens) - Lazy loaded
     const fetchWalletBalances = async () => {
         if (typeof window === 'undefined' || !walletName || !(window as any).cardano) {
             return;
         }
 
+        // Skip if already fetched
+        if (balancesFetched) {
+            return;
+        }
+
+        setBalancesLoading(true);
         try {
             const api = await (window as any).cardano[walletName].enable();
             const lucid = await initLucid(api);
@@ -101,9 +109,12 @@ export default function ProfilePage() {
             });
 
             setHeldTokens(tokens);
+            setBalancesFetched(true);
         } catch (err) {
             console.error("Error fetching wallet balances:", err);
             toast.error("Failed to fetch wallet balances");
+        } finally {
+            setBalancesLoading(false);
         }
     };
 
@@ -114,16 +125,21 @@ export default function ProfilePage() {
         }
 
         try {
-            // Fetch User Data
+            // Fetch User Data and Created Coins in PARALLEL for faster loading
             const userRef = doc(db, "users", walletAddress);
-            const userSnap = await getDoc(userRef);
+            const coinsQuery = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
+
+            const [userSnap, querySnapshot] = await Promise.all([
+                getDoc(userRef),
+                getDocs(coinsQuery)
+            ]);
+
+            // Process user data
             if (userSnap.exists()) {
                 setUserData(userSnap.data());
             }
 
-            // Fetch Created Coins
-            const q = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
-            const querySnapshot = await getDocs(q);
+            // Process created coins
             const coins = querySnapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
@@ -137,8 +153,7 @@ export default function ProfilePage() {
             });
             setCreatedCoins(coins);
 
-            // Fetch wallet balances
-            await fetchWalletBalances();
+            // Note: Wallet balances are now fetched lazily when needed (see useEffect below)
 
         } catch (error) {
             console.error("Error fetching profile data:", error);
@@ -156,6 +171,13 @@ export default function ProfilePage() {
         }
     }, [isConnected, walletAddress]);
 
+    // Lazy load wallet balances only when viewing Balances or Coin Held tabs
+    useEffect(() => {
+        if (isConnected && (activeTab === "Balances" || activeTab === "Coin Held") && !balancesFetched && !balancesLoading) {
+            fetchWalletBalances();
+        }
+    }, [activeTab, isConnected, balancesFetched, balancesLoading]);
+
     const copyToClipboard = (text: string) => {
         if (typeof navigator !== 'undefined') {
             navigator.clipboard.writeText(text);
@@ -171,6 +193,10 @@ export default function ProfilePage() {
             case "Coin Held":
                 return heldTokens;
             case "Balances":
+                // Show loading state if balances are being fetched
+                if (balancesLoading) {
+                    return [];
+                }
                 // Return ADA balance as an array item
                 return [{
                     id: "ada",
@@ -340,7 +366,11 @@ export default function ProfilePage() {
 
                         {/* Tab Content */}
                         <div className="min-h-[300px]">
-                            {isCryptoView ? (
+                            {balancesLoading ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="animate-spin w-8 h-8 text-green-500" />
+                                </div>
+                            ) : isCryptoView ? (
                                 viewMode === "list" ? (
                                     // LIST VIEW
                                     <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] overflow-hidden">
