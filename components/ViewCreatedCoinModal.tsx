@@ -1,9 +1,8 @@
 "use client";
 
 import { X, Youtube, ExternalLink, Users, DollarSign, Activity, Calendar, ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { LiveStream } from "./LiveStream";
 import { toast } from "sonner";
+import { useLiveStream } from "@/context/LiveStreamContext";
 
 interface ViewCreatedCoinModalProps {
     isOpen: boolean;
@@ -12,9 +11,8 @@ interface ViewCreatedCoinModalProps {
 }
 
 export default function ViewCreatedCoinModal({ isOpen, onClose, coin }: ViewCreatedCoinModalProps) {
-    const [isLive, setIsLive] = useState(false);
+    const { startStream } = useLiveStream();
     const agoraAppId = process.env.NEXT_PUBLIC_AGORA_APP_ID;
-    const agoraToken = process.env.NEXT_PUBLIC_AGORA_TOKEN;
 
     if (!isOpen || !coin) return null;
 
@@ -23,10 +21,18 @@ export default function ViewCreatedCoinModal({ isOpen, onClose, coin }: ViewCrea
             toast.error("Agora App ID is missing. Please configure it in .env.local");
             return;
         }
-        // In Secure Mode, token is required.
-        // If user switches back to testing mode (App ID only), they can leave token empty in env, 
-        // but for now we pass whatever is there.
-        setIsLive(true);
+
+        // HARDCODED CHANNEL NAME FOR TESTING
+        // The token you generated is likely for channel "test".
+        // We must use the exact same channel name here.
+        startStream("test", {
+            id: coin.id,
+            name: coin.name,
+            symbol: coin.symbol,
+            image: coin.image
+        });
+
+        onClose(); // Close the modal, the global player will take over
     };
 
     return (
@@ -38,14 +44,6 @@ export default function ViewCreatedCoinModal({ isOpen, onClose, coin }: ViewCrea
                 {/* Header */}
                 <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-gray-800 bg-[#141519]/95 backdrop-blur shrink-0">
                     <div className="flex items-center gap-4">
-                        {isLive && (
-                            <button
-                                onClick={() => setIsLive(false)}
-                                className="mr-2 p-1 hover:bg-gray-800 rounded-full transition-colors"
-                            >
-                                <ArrowLeft size={20} className="text-gray-400" />
-                            </button>
-                        )}
                         <div className="w-12 h-12 rounded-full bg-[#1a1b1f] border border-gray-700 flex items-center justify-center overflow-hidden">
                             <img
                                 src={coin.image}
@@ -75,82 +73,71 @@ export default function ViewCreatedCoinModal({ isOpen, onClose, coin }: ViewCrea
 
                 {/* Content */}
                 <div className="p-6 flex-1 overflow-y-auto">
-                    {isLive ? (
-                        <div className="h-[600px]">
-                            <LiveStream
-                                appId={agoraAppId!}
-                                token={agoraToken || null}
-                                channelName={coin.id.toString()}
-                                onEndCall={() => setIsLive(false)}
-                            />
+                    <div className="space-y-8">
+                        {/* Description */}
+                        <div>
+                            <h3 className="text-sm font-medium text-gray-400 uppercase mb-2">About</h3>
+                            <p className="text-gray-300 leading-relaxed">
+                                {coin.description || "No description available for this coin."}
+                            </p>
                         </div>
-                    ) : (
-                        <div className="space-y-8">
-                            {/* Description */}
-                            <div>
-                                <h3 className="text-sm font-medium text-gray-400 uppercase mb-2">About</h3>
-                                <p className="text-gray-300 leading-relaxed">
-                                    {coin.description || "No description available for this coin."}
-                                </p>
-                            </div>
 
-                            {/* Key Stats */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
-                                    <div className="text-gray-500 mb-1 flex items-center gap-2">
-                                        <DollarSign size={14} /> Market Cap
-                                    </div>
-                                    <div className="text-lg font-bold text-white">{coin.marketCap}</div>
+                        {/* Key Stats */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
+                                <div className="text-gray-500 mb-1 flex items-center gap-2">
+                                    <DollarSign size={14} /> Market Cap
                                 </div>
-                                <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
-                                    <div className="text-gray-500 mb-1 flex items-center gap-2">
-                                        <Activity size={14} /> Volume
-                                    </div>
-                                    <div className="text-lg font-bold text-white">{coin.volume}</div>
-                                </div>
-                                <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
-                                    <div className="text-gray-500 mb-1 flex items-center gap-2">
-                                        <Calendar size={14} /> Age
-                                    </div>
-                                    <div className="text-lg font-bold text-white">{coin.age}</div>
-                                </div>
-                                <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
-                                    <div className="text-gray-500 mb-1 flex items-center gap-2">
-                                        <Users size={14} /> Holders
-                                    </div>
-                                    <div className="text-lg font-bold text-white">1,234</div>
-                                </div>
+                                <div className="text-lg font-bold text-white">{coin.marketCap}</div>
                             </div>
-
-                            {/* Progress / Status */}
-                            <div className="bg-[#1a1b1f] p-5 rounded-xl border border-gray-800">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-medium text-white">Bonding Curve Progress</span>
-                                    <span className="text-sm font-bold text-green-400">85%</span>
+                            <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
+                                <div className="text-gray-500 mb-1 flex items-center gap-2">
+                                    <Activity size={14} /> Volume
                                 </div>
-                                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500 w-[85%] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                                </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    When the bonding curve reaches 100%, the liquidity will be deposited into a DEX.
-                                </p>
+                                <div className="text-lg font-bold text-white">{coin.volume}</div>
                             </div>
-
-                            {/* Actions */}
-                            <div className="flex flex-col gap-3 pt-4">
-                                <button
-                                    onClick={handleGoLive}
-                                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-900/20"
-                                >
-                                    <Youtube size={24} />
-                                    <span>Go Live Now</span>
-                                </button>
-                                <p className="text-center text-xs text-gray-500">
-                                    Start a live stream to engage with your community directly.
-                                </p>
+                            <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
+                                <div className="text-gray-500 mb-1 flex items-center gap-2">
+                                    <Calendar size={14} /> Age
+                                </div>
+                                <div className="text-lg font-bold text-white">{coin.age}</div>
+                            </div>
+                            <div className="bg-[#1a1b1f] p-4 rounded-xl border border-gray-800/50">
+                                <div className="text-gray-500 mb-1 flex items-center gap-2">
+                                    <Users size={14} /> Holders
+                                </div>
+                                <div className="text-lg font-bold text-white">1,234</div>
                             </div>
                         </div>
-                    )}
+
+                        {/* Progress / Status */}
+                        <div className="bg-[#1a1b1f] p-5 rounded-xl border border-gray-800">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-white">Bonding Curve Progress</span>
+                                <span className="text-sm font-bold text-green-400">85%</span>
+                            </div>
+                            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-500 w-[85%] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                                When the bonding curve reaches 100%, the liquidity will be deposited into a DEX.
+                            </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-3 pt-4">
+                            <button
+                                onClick={handleGoLive}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-red-900/20"
+                            >
+                                <Youtube size={24} />
+                                <span>Go Live Now</span>
+                            </button>
+                            <p className="text-center text-xs text-gray-500">
+                                Start a live stream to engage with your community directly.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

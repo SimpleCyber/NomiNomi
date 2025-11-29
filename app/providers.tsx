@@ -2,14 +2,17 @@
 
 import { ThemeProvider } from "next-themes";
 import { WalletProvider } from "@/context/WalletContext";
-import { Toaster } from "sonner";
+import { LiveStreamProvider } from "@/context/LiveStreamContext";
+import { GlobalLiveStreamPlayer } from "@/components/GlobalLiveStreamPlayer";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <WalletProvider>
-        {children}
-        <Toaster position="bottom-right" theme="system" />
+        <LiveStreamProvider>
+          {children}
+          <GlobalLiveStreamPlayer />
+        </LiveStreamProvider>
       </WalletProvider>
     </ThemeProvider>
   );
