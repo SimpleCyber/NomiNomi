@@ -11,7 +11,7 @@ import {
 // --- Types ---
 
 export interface Market {
-  id: number;
+  id: number | string;
   name: string;
   symbol: string;
   price: string;
