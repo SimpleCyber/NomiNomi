@@ -2,14 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, MoreVertical, Phone, Video } from "lucide-react";
-
-interface Message {
-    id: string;
-    senderId: string;
-    text: string;
-    timestamp: string;
-    isMe: boolean;
-}
+import { useWallet } from "@/context/WalletContext";
+import { getChatId, sendMessage, subscribeToMessages, Message } from "@/lib/chat";
 
 interface Friend {
     id: string;
@@ -22,32 +16,9 @@ interface ChatWindowProps {
     friend: Friend | null;
 }
 
-const MOCK_MESSAGES: Message[] = [
-    {
-        id: "1",
-        senderId: "1",
-        text: "Hey! How are you?",
-        timestamp: "11:30 AM",
-        isMe: false,
-    },
-    {
-        id: "2",
-        senderId: "me",
-        text: "I'm doing great, just checking the charts.",
-        timestamp: "11:32 AM",
-        isMe: true,
-    },
-    {
-        id: "3",
-        senderId: "1",
-        text: "Did you see the new token launch?",
-        timestamp: "11:33 AM",
-        isMe: false,
-    },
-];
-
 export default function ChatWindow({ friend }: ChatWindowProps) {
-    const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
+    const { walletAddress: currentUserAddress } = useWallet();
+    const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -59,20 +30,40 @@ export default function ChatWindow({ friend }: ChatWindowProps) {
         scrollToBottom();
     }, [messages]);
 
-    const handleSendMessage = (e?: React.FormEvent) => {
+    // Subscribe to real-time messages
+    useEffect(() => {
+        if (!friend || !currentUserAddress) {
+            setMessages([]);
+            return;
+        }
+
+        const chatId = getChatId(currentUserAddress, friend.id);
+        const unsubscribe = subscribeToMessages(chatId, (newMessages) => {
+            setMessages(newMessages);
+        });
+
+        return () => unsubscribe();
+    }, [friend, currentUserAddress]);
+
+    const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || !friend || !currentUserAddress) return;
 
-        const message: Message = {
-            id: Date.now().toString(),
-            senderId: "me",
-            text: newMessage,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isMe: true,
-        };
+        const chatId = getChatId(currentUserAddress, friend.id);
 
-        setMessages([...messages, message]);
-        setNewMessage("");
+        try {
+            await sendMessage(chatId, currentUserAddress, newMessage, [currentUserAddress, friend.id]);
+            setNewMessage("");
+        } catch (error) {
+            console.error("Failed to send message:", error);
+        }
+    };
+
+    const formatTime = (timestamp: any) => {
+        if (!timestamp) return "";
+        // Handle Firestore Timestamp
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     if (!friend) {
@@ -110,25 +101,28 @@ export default function ChatWindow({ friend }: ChatWindowProps) {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {messages.map((msg) => (
-                    <div
-                        key={msg.id}
-                        className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}
-                    >
+                {messages.map((msg) => {
+                    const isMe = msg.senderId === currentUserAddress;
+                    return (
                         <div
-                            className={`max-w-[70%] rounded-2xl px-4 py-3 ${msg.isMe
+                            key={msg.id}
+                            className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                        >
+                            <div
+                                className={`max-w-[70%] rounded-2xl px-4 py-3 ${isMe
                                     ? "bg-[var(--primary)] text-white rounded-br-none"
                                     : "bg-[var(--card-bg)] text-[var(--foreground)] border border-[var(--border-color)] rounded-bl-none"
-                                }`}
-                        >
-                            <p className="text-sm">{msg.text}</p>
-                            <span className={`text-[10px] mt-1 block ${msg.isMe ? "text-white/70" : "text-[var(--muted-foreground)]"
-                                } text-right`}>
-                                {msg.timestamp}
-                            </span>
+                                    }`}
+                            >
+                                <p className="text-sm">{msg.text}</p>
+                                <span className={`text-[10px] mt-1 block ${isMe ? "text-white/70" : "text-[var(--muted-foreground)]"
+                                    } text-right`}>
+                                    {formatTime(msg.timestamp)}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
                 <div ref={messagesEndRef} />
             </div>
 
@@ -150,9 +144,11 @@ export default function ChatWindow({ friend }: ChatWindowProps) {
                         <Send size={20} />
                     </button>
                 </form>
-                <div className="text-center mt-2">
-                    <span className="text-xs text-[var(--muted-foreground)]">Connect wallet to start chatting</span>
-                </div>
+                {!currentUserAddress && (
+                    <div className="text-center mt-2">
+                        <span className="text-xs text-[var(--muted-foreground)]">Connect wallet to start chatting</span>
+                    </div>
+                )}
             </div>
         </div>
     );
