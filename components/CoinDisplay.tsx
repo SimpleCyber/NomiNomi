@@ -30,10 +30,10 @@ export default function CoinDisplay({
   coins, 
   isLoading = false, 
   onCoinClick,
-  emptyMessage = "No coins found."
-}: CoinDisplayProps) {
-  const [viewMode, setViewMode] = useState<"list" | "cards">("list");
-
+  emptyMessage = "No coins found.",
+  viewMode = "list"
+}: CoinDisplayProps & { viewMode: "list" | "cards" }) {
+  
   if (isLoading) {
     return <div className="py-10 text-center text-[var(--muted)]">Loading...</div>;
   }
@@ -48,30 +48,7 @@ export default function CoinDisplay({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-end mb-4">
-        <div className="flex items-center bg-[var(--card-bg)] rounded-lg p-1 border border-[var(--border-color)]">
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "list"
-                ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            <List size={18} />
-          </button>
-          <button
-            onClick={() => setViewMode("cards")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "cards"
-                ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
-                : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            <LayoutGrid size={18} />
-          </button>
-        </div>
-      </div>
+
 
       {viewMode === "list" ? (
         <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] p-6 overflow-hidden">

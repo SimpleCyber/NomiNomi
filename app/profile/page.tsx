@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, ExternalLink, Search, Loader2 } from "lucide-react";
+import { Copy, ExternalLink, Search, Loader2, LayoutGrid, List } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import { useWallet } from "@/context/WalletContext";
@@ -23,6 +23,7 @@ export default function ProfilePage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedCoin, setSelectedCoin] = useState<any>(null);
     const [isViewCoinModalOpen, setIsViewCoinModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<"list" | "cards">("list");
 
     const tabs = [
         "Balances",
@@ -198,9 +199,9 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Tabs */}
-                        <div className="border-b border-[var(--border-color)] mb-6 overflow-x-auto">
-                            <div className="flex gap-6 min-w-max">
+                        {/* Tabs & View Toggle */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--border-color)] mb-6">
+                            <div className="flex gap-6 overflow-x-auto min-w-max pb-3 md:pb-0">
                                 {tabs.map((tab) => (
                                     <button
                                         key={tab}
@@ -217,6 +218,32 @@ export default function ProfilePage() {
                                     </button>
                                 ))}
                             </div>
+
+                            {/* View Toggle - Only show for relevant tabs */}
+                            {(activeTab === "Coin Created" || activeTab === "Coin Held") && (
+                                <div className="flex items-center bg-[var(--card-bg)] rounded-lg p-1 border border-[var(--border-color)] mb-2 md:mb-0 self-end md:self-auto">
+                                    <button
+                                        onClick={() => setViewMode("list")}
+                                        className={`p-2 rounded-md transition-colors ${
+                                            viewMode === "list"
+                                                ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
+                                                : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                                        }`}
+                                    >
+                                        <List size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode("cards")}
+                                        className={`p-2 rounded-md transition-colors ${
+                                            viewMode === "cards"
+                                                ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
+                                                : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                                        }`}
+                                    >
+                                        <LayoutGrid size={18} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Tab Content */}
@@ -257,6 +284,7 @@ export default function ProfilePage() {
                                     coins={createdCoins} 
                                     onCoinClick={handleCoinClick}
                                     emptyMessage="No coins created yet."
+                                    viewMode={viewMode}
                                 />
                             )}
 
@@ -265,6 +293,7 @@ export default function ProfilePage() {
                                     coins={[]} // Placeholder for held coins
                                     onCoinClick={handleCoinClick} // Assuming we might want to view details for held coins too
                                     emptyMessage="No coins held yet."
+                                    viewMode={viewMode}
                                 />
                             )}
 

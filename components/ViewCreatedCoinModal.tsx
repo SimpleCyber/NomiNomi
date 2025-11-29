@@ -11,7 +11,11 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
-import { LiveStream } from "./LiveStream";
+import dynamic from "next/dynamic";
+const LiveStream = dynamic(() => import("./LiveStream").then((mod) => mod.LiveStream), {
+  ssr: false,
+  loading: () => <div className="h-[600px] flex items-center justify-center bg-black text-white">Loading Stream...</div>
+});
 import { toast } from "sonner";
 
 interface ViewCreatedCoinModalProps {
