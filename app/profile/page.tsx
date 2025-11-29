@@ -8,6 +8,7 @@ import { useWallet } from "@/context/WalletContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { toast } from "sonner";
+import EditProfileModal from "@/components/EditProfileModal";
 
 export default function ProfilePage() {
     const { isConnected, walletAddress } = useWallet();
@@ -15,6 +16,7 @@ export default function ProfilePage() {
     const [userData, setUserData] = useState<any>(null);
     const [createdCoins, setCreatedCoins] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const tabs = [
         "Balances",
@@ -24,36 +26,36 @@ export default function ProfilePage() {
         "Coin Held",
     ];
 
+    const fetchData = async () => {
+        if (!walletAddress) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // Fetch User Data
+            const userRef = doc(db, "users", walletAddress);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                setUserData(userSnap.data());
+            }
+
+            // Fetch Created Coins
+            // Assuming 'memecoins' collection has a 'creatorAddress' field
+            const q = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
+            const querySnapshot = await getDocs(q);
+            const coins = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setCreatedCoins(coins);
+
+        } catch (error) {
+            console.error("Error fetching profile data:", error);
+            toast.error("Failed to load profile data.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            if (!walletAddress) {
-                setLoading(false);
-                return;
-            }
-
-            try {
-                // Fetch User Data
-                const userRef = doc(db, "users", walletAddress);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                    setUserData(userSnap.data());
-                }
-
-                // Fetch Created Coins
-                // Assuming 'memecoins' collection has a 'creatorAddress' field
-                const q = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
-                const querySnapshot = await getDocs(q);
-                const coins = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setCreatedCoins(coins);
-
-            } catch (error) {
-                console.error("Error fetching profile data:", error);
-                toast.error("Failed to load profile data.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         if (isConnected) {
             fetchData();
         } else {
@@ -132,10 +134,21 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
                             </div>
-                            <button className="bg-[var(--input-bg)] hover:bg-[var(--border-color)] text-[var(--foreground)] px-6 py-2 rounded-md font-medium transition-colors border border-[var(--border-color)]">
+                            <button 
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="bg-[var(--input-bg)] hover:bg-[var(--border-color)] text-[var(--foreground)] px-6 py-2 rounded-md font-medium transition-colors border border-[var(--border-color)]"
+                            >
                                 Edit Profile
                             </button>
                         </div>
+
+                        <EditProfileModal 
+                            isOpen={isEditModalOpen}
+                            onClose={() => setIsEditModalOpen(false)}
+                            currentUsername={userData?.username || ""}
+                            walletAddress={walletAddress || ""}
+                            onUpdate={fetchData}
+                        />
 
                         {/* Stats */}
                         <div className="flex gap-8 mb-10 text-sm">

@@ -24,13 +24,14 @@ export function SidebarContent({
 }) {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
+  const [hoveredItem, setHoveredItem] = useState<{ name: string; top: number } | null>(null);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
   return (
-    <div className="flex flex-col h-full bg-[var(--sidebar-bg)]">
+    <div className="flex flex-col h-full bg-[var(--sidebar-bg)] relative">
       {/* Header / Toggle */}
       <div
         className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} p-4 h-16 border-b border-[var(--sidebar-border)]`}
@@ -85,6 +86,13 @@ export function SidebarContent({
               key={item.name}
               href={item.href}
               onClick={isMobile ? onClose : undefined}
+              onMouseEnter={(e) => {
+                if (isCollapsed) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setHoveredItem({ name: item.name, top: rect.top });
+                }
+              }}
+              onMouseLeave={() => setHoveredItem(null)}
               className={`group flex items-center gap-3 p-2 rounded-lg transition-colors relative
                 ${
                   isActive
@@ -102,13 +110,6 @@ export function SidebarContent({
                   {item.name}
                 </span>
               )}
-
-              {/* Tooltip for collapsed state */}
-              {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                  {item.name}
-                </div>
-              )}
             </Link>
           );
         })}
@@ -119,6 +120,13 @@ export function SidebarContent({
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
+          onMouseEnter={(e) => {
+            if (isCollapsed) {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredItem({ name: theme === "dark" ? "Dark Mode" : "Light Mode", top: rect.top });
+            }
+          }}
+          onMouseLeave={() => setHoveredItem(null)}
           className="group flex items-center gap-3 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors relative w-full"
         >
           <div className="min-w-[24px] flex justify-center">
@@ -130,13 +138,6 @@ export function SidebarContent({
               {theme === "dark" ? "Dark Mode" : "Light Mode"}
             </span>
           )}
-
-          {/* Tooltip for collapsed state */}
-          {isCollapsed && (
-            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-              {theme === "dark" ? "Dark Mode" : "Light Mode"}
-            </div>
-          )}
         </button>
 
         {BOTTOM_MENU_ITEMS.map((item) => (
@@ -144,6 +145,13 @@ export function SidebarContent({
             key={item.name}
             href={item.href}
             onClick={isMobile ? onClose : undefined}
+            onMouseEnter={(e) => {
+              if (isCollapsed) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({ name: item.name, top: rect.top });
+              }
+            }}
+            onMouseLeave={() => setHoveredItem(null)}
             className="group flex items-center gap-3 p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors relative"
           >
             <div className="min-w-[24px] flex justify-center">
@@ -155,16 +163,19 @@ export function SidebarContent({
                 {item.name}
               </span>
             )}
-
-            {/* Tooltip for collapsed state */}
-            {isCollapsed && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                {item.name}
-              </div>
-            )}
           </Link>
         ))}
       </div>
+
+      {/* Shared Tooltip */}
+      {isCollapsed && hoveredItem && (
+        <div 
+          className="fixed left-[4.5rem] px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-200"
+          style={{ top: hoveredItem.top + 8 }}
+        >
+          {hoveredItem.name}
+        </div>
+      )}
     </div>
   );
 }
