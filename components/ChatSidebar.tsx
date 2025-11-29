@@ -1,11 +1,14 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, UserPlus, X } from "lucide-react";
-import { searchUsers, UserProfile } from "@/lib/user";
+import { useState, useEffect, useRef } from "react";
+import { Search } from "lucide-react";
+import { UserProfile } from "@/lib/user";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/context/WalletContext";
 import { subscribeToChats } from "@/lib/chat";
+import { toast } from "sonner";
 
 // Simple debounce hook implementation if not exists
 function useDebounceValue<T>(value: T, delay: number): T {
@@ -41,20 +44,22 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
   const router = useRouter();
   const { walletAddress: currentUserAddress } = useWallet();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [activeChats, setActiveChats] = useState<any[]>([]);
-  const [isAddingFriend, setIsAddingFriend] = useState(false); // Toggle for global search
+  const [isLoading, setIsLoading] = useState(true);
 
-  const debouncedSearchQuery = useDebounceValue(searchQuery, 500);
+  // Refs for tracking message timestamps to trigger notifications
+  const lastMessageTimestamps = useRef<Map<string, number>>(new Map());
+  const isFirstLoad = useRef(true);
 
   // Subscribe to active chats
   useEffect(() => {
     if (!currentUserAddress) {
       setActiveChats([]);
+      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     const unsubscribe = subscribeToChats(currentUserAddress, async (chats) => {
       // For each chat, we need to find the "other" participant to display their name/avatar
       const formattedChats = await Promise.all(chats.map(async (chat) => {
@@ -66,10 +71,33 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
         const { getUserProfile } = await import("@/lib/user");
         const userProfile = await getUserProfile(otherUserId);
 
+        const friendName = userProfile?.username || "Unknown User";
+
+        // Notification Logic
+        if (chat.lastMessage) {
+          const currentTimestamp = chat.lastMessage.timestamp?.toMillis
+            ? chat.lastMessage.timestamp.toMillis()
+            : new Date(chat.lastMessage.timestamp).getTime();
+
+          const lastTimestamp = lastMessageTimestamps.current.get(chat.id);
+
+          // If not first load, and we have a new message, and it's not from us
+          if (!isFirstLoad.current && lastTimestamp && currentTimestamp > lastTimestamp) {
+            if (chat.lastMessage.senderId !== currentUserAddress) {
+              toast.info(`New message from ${friendName}`, {
+                description: chat.lastMessage.text,
+              });
+            }
+          }
+
+          // Update timestamp
+          lastMessageTimestamps.current.set(chat.id, currentTimestamp);
+        }
+
         return {
           id: otherUserId, // We use the user ID as the friend ID for selection
           chatId: chat.id,
-          name: userProfile?.username || "Unknown User",
+          name: friendName,
           avatar: "/image.png", // Placeholder
           status: "offline", // We don't have real presence yet
           lastMessage: chat.lastMessage?.text || "",
@@ -78,63 +106,35 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
         };
       }));
 
+      // After first pass, disable first load flag
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+      }
+
       setActiveChats(formattedChats.filter(c => c !== null));
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, [currentUserAddress]);
 
-  // Handle global search (only when adding friend)
-  useEffect(() => {
-    const performSearch = async () => {
-      if (isAddingFriend && debouncedSearchQuery.trim().length > 0) {
-        setIsSearching(true);
-        const results = await searchUsers(debouncedSearchQuery);
-        setSearchResults(results);
-        setIsSearching(false);
-      } else {
-        setSearchResults([]);
-      }
-    };
-
-    performSearch();
-  }, [debouncedSearchQuery, isAddingFriend]);
-
-  const handleUserClick = (user: UserProfile) => {
-    // Navigate to user profile
-    router.push(`/profile/${user.walletAddress}`);
-  };
-
-  const toggleAddFriend = () => {
-    setIsAddingFriend(!isAddingFriend);
-    setSearchQuery(""); // Clear search when toggling
-    setSearchResults([]);
-  };
-
-  // Filter active chats based on search query (when NOT adding friend)
-  const filteredActiveChats = !isAddingFriend
-    ? activeChats.filter(chat => chat.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : activeChats;
+  // Filter active chats based on search query
+  const filteredActiveChats = activeChats.filter(chat =>
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="w-full md:w-80 border-r border-[var(--border-color)] bg-[var(--card-bg)] flex flex-col h-full">
       <div className="p-4 border-b border-[var(--border-color)]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">{isAddingFriend ? "Add Friend" : "Messages"}</h2>
-          <button
-            onClick={toggleAddFriend}
-            className="p-2 hover:bg-[var(--secondary)] rounded-full transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-            title={isAddingFriend ? "Close Search" : "Add New Friend"}
-          >
-            {isAddingFriend ? <X size={20} /> : <UserPlus size={20} />}
-          </button>
+          <h2 className="text-xl font-bold">Messages</h2>
         </div>
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" size={18} />
           <input
             type="text"
-            placeholder={isAddingFriend ? "Search new users..." : "Search chats..."}
+            placeholder="Search chats..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[var(--input-bg)] text-[var(--foreground)] pl-10 pr-4 py-2 rounded-lg border border-[var(--border-color)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)] placeholder-[var(--muted-foreground)]"
@@ -143,39 +143,22 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Global Search Results (Add Friend Mode) */}
-        {isAddingFriend && (
-          <div className="mb-4">
-            <h3 className="px-4 py-2 text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
-              {isSearching ? "Searching..." : "Global Results"}
-            </h3>
-            {searchResults.length > 0 ? (
-              searchResults.map((user) => (
-                <div
-                  key={user.walletAddress}
-                  onClick={() => handleUserClick(user)}
-                  className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-[var(--secondary)]/50 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-lg">
-                    🐸
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-[var(--foreground)] truncate">{user.username}</h4>
-                    <p className="text-xs text-[var(--muted-foreground)] truncate">{user.walletAddress.slice(0, 8)}...</p>
-                  </div>
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="p-4 space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-gray-700"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-700 rounded w-1/2"></div>
                 </div>
-              ))
-            ) : (
-              searchQuery.trim().length > 0 && !isSearching && (
-                <div className="px-4 py-2 text-sm text-[var(--muted-foreground)]">No users found.</div>
-              )
-            )}
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* Active Chats List (Default Mode) */}
-        {!isAddingFriend && (
+        ) : (
           <>
+            {/* Active Chats List */}
             {filteredActiveChats.length > 0 ? (
               <>
                 <h3 className="px-4 py-2 text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
@@ -215,12 +198,7 @@ export default function ChatSidebar({ onSelectFriend, selectedFriendId }: ChatSi
                 ) : (
                   <>
                     <p className="mb-2">No active chats yet.</p>
-                    <button
-                      onClick={toggleAddFriend}
-                      className="text-[var(--primary)] hover:underline text-sm"
-                    >
-                      Find someone to chat with
-                    </button>
+                    <p className="text-sm">Search for users in the top bar to start a chat.</p>
                   </>
                 )}
               </div>

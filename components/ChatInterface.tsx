@@ -33,7 +33,7 @@ export default function ChatInterface({ initialChatUserId }: ChatInterfaceProps)
     }, [initialChatUserId]);
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-[var(--background)]">
+        <div className="flex h-full overflow-hidden bg-[var(--background)]">
             <div className={`${selectedFriend ? 'hidden md:block' : 'w-full'} md:w-auto h-full`}>
                 <ChatSidebar
                     onSelectFriend={setSelectedFriend}

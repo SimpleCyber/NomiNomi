@@ -55,12 +55,12 @@ export default function Navbar() {
       <div className="max-w-[1400px] mx-auto px-6 h-[63px] flex items-center justify-between">
         {/* Mobile Menu Button */}
         <button
-            className="md:hidden text-[var(--muted)] hover:text-[var(--foreground)] mr-3"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <img src="./image.png" alt="" className="w-7 h-7" />
-          </button>
-          
+          className="md:hidden text-[var(--muted)] hover:text-[var(--foreground)] mr-3"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          <img src="./image.png" alt="" className="w-7 h-7" />
+        </button>
+
         {/* Search Bar */}
         <div className="relative w-full max-w-md" ref={searchRef}>
           <div
@@ -87,17 +87,20 @@ export default function Navbar() {
 
           {/* Search Results Dropdown */}
           {showResults && (
-            <SearchResults onClose={() => setShowResults(false)} />
+            <SearchResults
+              onClose={() => setShowResults(false)}
+              searchQuery={searchQuery}
+            />
           )}
         </div>
 
         <div className="flex items-center gap-3 flex-row-reverse flex">
           <div className="hidden md:flex items-center gap-3">
             <Link href="/createcoin">
-            <button className="px-4 py-1.5 text-sm font-medium text-white bg-[var(--primary)] hover:bg-violet-700 rounded-lg transition-colors flex items-center ">
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Create Coin
-            </button>
+              <button className="px-4 py-1.5 text-sm font-medium text-white bg-[var(--primary)] hover:bg-violet-700 rounded-lg transition-colors flex items-center ">
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Create Coin
+              </button>
             </Link>
             {isConnected ? (
               <button
@@ -130,9 +133,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      <WalletModal 
-        isOpen={isWalletModalOpen} 
-        onClose={() => setIsWalletModalOpen(false)} 
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
       />
 
       {/* Mobile Sidebar */}

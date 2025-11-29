@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
+import { useThemeAnimation } from "@/hooks/useThemeAnimation";
 import {
   ChevronLeft,
   Sun,
@@ -22,13 +22,9 @@ export function SidebarContent({
   isMobile?: boolean;
   onClose?: () => void;
 }) {
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleThemeWithAnimation, buttonRef } = useThemeAnimation();
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<{ name: string; top: number } | null>(null);
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
 
   return (
     <div className="flex flex-col h-full bg-[var(--sidebar-bg)] relative">
@@ -94,10 +90,9 @@ export function SidebarContent({
               }}
               onMouseLeave={() => setHoveredItem(null)}
               className={`group flex items-center gap-3 p-2 rounded-lg transition-colors relative
-                ${
-                  isActive
-                    ? "bg-violet-500/10 text-violet-500"
-                    : "hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
+                ${isActive
+                  ? "bg-violet-500/10 text-violet-500"
+                  : "hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
                 }
               `}
             >
@@ -119,7 +114,8 @@ export function SidebarContent({
       <div className="p-2 border-t border-[var(--sidebar-border)] flex flex-col gap-2">
         {/* Theme Toggle */}
         <button
-          onClick={toggleTheme}
+          ref={buttonRef}
+          onClick={toggleThemeWithAnimation}
           onMouseEnter={(e) => {
             if (isCollapsed) {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -169,7 +165,7 @@ export function SidebarContent({
 
       {/* Shared Tooltip */}
       {isCollapsed && hoveredItem && (
-        <div 
+        <div
           className="fixed left-[4rem] px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-200"
           style={{ top: hoveredItem.top + 8 }}
         >
