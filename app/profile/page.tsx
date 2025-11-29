@@ -200,7 +200,7 @@ export default function ProfilePage() {
                         </div>
 
                         {/* Tabs & View Toggle */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--border-color)] mb-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--border-color)] mb-6 py-1">
                             <div className="flex gap-6 overflow-x-auto min-w-max pb-3 md:pb-0">
                                 {tabs.map((tab) => (
                                     <button
