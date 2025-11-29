@@ -1,5 +1,12 @@
-
-import { Home, Tv, MessageCircle, RefreshCcw, User, PlusCircle, HelpCircle } from "lucide-react";
+import {
+  Home,
+  Tv,
+  MessageCircle,
+  RefreshCcw,
+  User,
+  PlusCircle,
+  HelpCircle,
+} from "lucide-react";
 
 // --- Types ---
 
@@ -328,7 +335,12 @@ export const MARKET_STATS = {
       change: "+0.82%",
       isPositive: true,
     },
-    { symbol: "MET-PERP", price: "$0.3387", change: "-4.16%", isPositive: false },
+    {
+      symbol: "MET-PERP",
+      price: "$0.3387",
+      change: "-4.16%",
+      isPositive: false,
+    },
     {
       symbol: "PIPE-PERP",
       price: "$0.06508",
@@ -349,9 +361,24 @@ export const MARKET_STATS = {
       change: "-8.55%",
       isPositive: false,
     },
-    { symbol: "2Z-PERP", price: "$0.11494", change: "-8.51%", isPositive: false },
-    { symbol: "ZEC-PERP", price: "$472.33", change: "-7.78%", isPositive: false },
-    { symbol: "JTO-PERP", price: "$0.5002", change: "-5.75%", isPositive: false },
+    {
+      symbol: "2Z-PERP",
+      price: "$0.11494",
+      change: "-8.51%",
+      isPositive: false,
+    },
+    {
+      symbol: "ZEC-PERP",
+      price: "$472.33",
+      change: "-7.78%",
+      isPositive: false,
+    },
+    {
+      symbol: "JTO-PERP",
+      price: "$0.5002",
+      change: "-5.75%",
+      isPositive: false,
+    },
   ],
   popular: [
     {
@@ -366,8 +393,18 @@ export const MARKET_STATS = {
       change: "-0.47%",
       isPositive: false,
     },
-    { symbol: "BNB-PERP", price: "$896.84", change: "+0.21%", isPositive: true },
-    { symbol: "ADA-PERP", price: "$140.23", change: "-1.96%", isPositive: false },
+    {
+      symbol: "BNB-PERP",
+      price: "$896.84",
+      change: "+0.21%",
+      isPositive: true,
+    },
+    {
+      symbol: "ADA-PERP",
+      price: "$140.23",
+      change: "-1.96%",
+      isPositive: false,
+    },
     {
       symbol: "MON-PERP",
       price: "$0.037338",

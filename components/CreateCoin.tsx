@@ -12,7 +12,15 @@ import {
 import Image from "next/image";
 import { uploadJSONToIPFS } from "../lib/ipfs";
 import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useWallet } from "../context/WalletContext";
 import { mintToken } from "../lib/transactions";
@@ -34,26 +42,26 @@ export default function CreateCoin() {
   const router = useRouter();
   const { walletAddress, isConnected, walletName } = useWallet();
 
-
-
   const checkAntiRugLimit = async (address: string) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     // Query only by creatorAddress to avoid composite index requirement
     const q = query(
       collection(db, "memecoins"),
-      where("creatorAddress", "==", address)
+      where("creatorAddress", "==", address),
     );
 
     const querySnapshot = await getDocs(q);
-    
+
     // Filter client-side
-    const recentCoins = querySnapshot.docs.filter(doc => {
+    const recentCoins = querySnapshot.docs.filter((doc) => {
       const data = doc.data();
       if (!data.createdAt) return false;
       // Handle Firestore Timestamp
-      const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+      const createdAt = data.createdAt.toDate
+        ? data.createdAt.toDate()
+        : new Date(data.createdAt);
       return createdAt >= thirtyDaysAgo;
     });
 
@@ -66,7 +74,9 @@ export default function CreateCoin() {
     const data = encoder.encode(jsonString);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
     return hashHex;
   };
 
@@ -88,7 +98,9 @@ export default function CreateCoin() {
       // 0. Anti-Rug Check
       const createdCount = await checkAntiRugLimit(walletAddress);
       if (createdCount >= 30) {
-        throw new Error("Anti-Rug Policy: You have created 30 coins in the last 30 days. Please wait.");
+        throw new Error(
+          "Anti-Rug Policy: You have created 30 coins in the last 30 days. Please wait.",
+        );
       }
 
       // 1. Use Image URL directly
@@ -126,29 +138,27 @@ export default function CreateCoin() {
       // Note: In a real app, we might want to do this BEFORE Firestore or handle failures gracefully.
       // For now, we'll try to mint. If it fails, the Firestore doc exists but might be invalid on-chain.
       // We can update the doc status to "MINTED" after success.
-      
+
       try {
         const cardano = (window as any).cardano;
         if (!walletName) throw new Error("Wallet not connected properly");
         const walletApi = await cardano[walletName].enable();
-        
+
         const txHash = await mintToken(walletApi, metadata, metadataHash);
         console.log("Mint Tx Hash:", txHash);
-        
+
         // Update Firestore with Tx Hash
         // await updateDoc(docRef, { txHash, status: "MINTED" });
-        
       } catch (txError) {
         console.error("Transaction failed:", txError);
         // await deleteDoc(docRef); // Optional rollback
         toast.error("On-chain transaction failed. Please try again.");
         throw new Error("On-chain transaction failed. Please try again.");
       }
-      
+
       // Redirect to token page
       router.push(`/token/${docRef.id}`);
       toast.success("Token created successfully!");
-
     } catch (err: any) {
       console.error("Error creating coin:", err);
       setError(err.message || "Failed to create coin.");
@@ -157,8 +167,6 @@ export default function CreateCoin() {
       setIsLoading(false);
     }
   };
-
-
 
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -176,17 +184,17 @@ export default function CreateCoin() {
         <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6 space-y-4">
           <h3 className="font-medium">Coin Image</h3>
           <div className="space-y-2">
-             <label className="text-sm text-[var(--muted)]">Image URL</label>
-             <input
-                type="text"
-                value={imagePreview || ""}
-                onChange={(e) => setImagePreview(e.target.value)}
-                placeholder="https://example.com/image.png"
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-3 outline-none focus:border-blue-500 transition-colors"
-             />
-             <p className="text-xs text-[var(--muted)]">
-               Enter a direct link to an image (jpg, png, gif).
-             </p>
+            <label className="text-sm text-[var(--muted)]">Image URL</label>
+            <input
+              type="text"
+              value={imagePreview || ""}
+              onChange={(e) => setImagePreview(e.target.value)}
+              placeholder="https://example.com/image.png"
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-3 outline-none focus:border-blue-500 transition-colors"
+            />
+            <p className="text-xs text-[var(--muted)]">
+              Enter a direct link to an image (jpg, png, gif).
+            </p>
           </div>
         </div>
 
@@ -280,9 +288,6 @@ export default function CreateCoin() {
               </div>
             )}
           </div>
-
-         
-
         </div>
 
         <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-3">

@@ -9,11 +9,11 @@ interface WalletSelectorModalProps {
   onSelect: (walletName: string) => void;
 }
 
-export default function WalletSelectorModal({ 
-  isOpen, 
-  onClose, 
-  wallets, 
-  onSelect 
+export default function WalletSelectorModal({
+  isOpen,
+  onClose,
+  wallets,
+  onSelect,
 }: WalletSelectorModalProps) {
   if (!isOpen) return null;
 
@@ -41,7 +41,7 @@ export default function WalletSelectorModal({
           <p className="text-sm text-[var(--muted)] mb-4">
             Multiple wallets detected. Please select one to connect.
           </p>
-          
+
           {wallets.map((wallet) => (
             <button
               key={wallet}
