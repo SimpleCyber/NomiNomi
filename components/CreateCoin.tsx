@@ -247,7 +247,7 @@ export default function CreateCoin() {
           </div>
 
           {/* Banner Upload Accordion */}
-          <div className="mt-6 pt-4 border-t border-[var(--border-color)]">
+          {/* <div className="mt-6 pt-4 border-t border-[var(--border-color)]">
             <button
               onClick={() => setShowBannerUpload(!showBannerUpload)}
               className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)] hover:text-blue-500 transition-colors"
@@ -278,7 +278,7 @@ export default function CreateCoin() {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Inputs */}
@@ -372,45 +372,8 @@ export default function CreateCoin() {
             )}
           </div>
 
-          {/* Mayhem Mode */}
-          <div className="bg-[var(--input-bg)] rounded-xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center border border-red-500/30">
-                <Activity className="text-green-400" size={20} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">Mayhem mode</span>
-                  <span className="bg-green-400/20 text-green-400 text-xs px-2 py-0.5 rounded-full font-medium">
-                    New
-                  </span>
-                </div>
-                <p className="text-sm text-[var(--muted)]">
-                  Increased price volume.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsMayhemMode(!isMayhemMode)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${
-                isMayhemMode ? "bg-green-400" : "bg-gray-600"
-              }`}
-            >
-              <div
-                className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                  isMayhemMode ? "left-7" : "left-1"
-                }`}
-              />
-            </button>
-          </div>
+         
 
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-            <Info size={14} />
-            Active for 24h, only set at creation. May increase coin supply.{" "}
-            <span className="text-green-400 cursor-pointer hover:underline">
-              Learn more
-            </span>
-          </div>
         </div>
 
         <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-3">

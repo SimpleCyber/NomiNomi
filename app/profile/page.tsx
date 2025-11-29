@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Copy, ExternalLink, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Copy, ExternalLink, Search, Loader2 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
+import { useWallet } from "@/context/WalletContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
+    const { isConnected, walletAddress } = useWallet();
     const [activeTab, setActiveTab] = useState("Balances");
+    const [userData, setUserData] = useState<any>(null);
+    const [createdCoins, setCreatedCoins] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const tabs = [
         "Balances",
@@ -16,8 +24,81 @@ export default function ProfilePage() {
         "Coin Held",
     ];
 
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!walletAddress) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                // Fetch User Data
+                const userRef = doc(db, "users", walletAddress);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    setUserData(userSnap.data());
+                }
+
+                // Fetch Created Coins
+                // Assuming 'memecoins' collection has a 'creatorAddress' field
+                const q = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
+                const querySnapshot = await getDocs(q);
+                const coins = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setCreatedCoins(coins);
+
+            } catch (error) {
+                console.error("Error fetching profile data:", error);
+                toast.error("Failed to load profile data.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (isConnected) {
+            fetchData();
+        } else {
+            setLoading(false);
+        }
+    }, [isConnected, walletAddress]);
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast.success("Copied to clipboard!");
+    };
+
+    if (!isConnected) {
+        return (
+            <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
+                <Sidebar />
+                <div className="flex flex-col min-h-screen md:ml-[var(--sidebar-width)] transition-[margin] duration-300 ease-in-out">
+                    <Navbar />
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold mb-4">Please connect your wallet</h2>
+                            <p className="text-[var(--muted)]">Connect your wallet to view your profile.</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    if (loading) {
+        return (
+            <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
+                <Sidebar />
+                <div className="flex flex-col min-h-screen md:ml-[var(--sidebar-width)] transition-[margin] duration-300 ease-in-out">
+                    <Navbar />
+                    <div className="flex-1 flex items-center justify-center">
+                        <Loader2 className="animate-spin w-10 h-10 text-[var(--primary)]" />
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
     return (
-        <main className="min-h-screen bg-[#0f1014] text-white font-sans">
+        <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans">
             <Sidebar />
             <div className="flex flex-col min-h-screen md:ml-[var(--sidebar-width)] transition-[margin] duration-300 ease-in-out">
                 <Navbar />
@@ -28,60 +109,65 @@ export default function ProfilePage() {
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="relative w-20 h-20 rounded-full overflow-hidden bg-green-900 border-2 border-green-500/20">
-                                    {/* Placeholder Avatar */}
+                                    {/* Placeholder Avatar - could be dynamic later */}
                                     <div className="w-full h-full flex items-center justify-center text-3xl">
                                         🐸
                                     </div>
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold mb-1">NomiNomi</h1>
-                                    <div className="flex items-center gap-2 text-sm text-gray-400 bg-[#1a1b1f] px-2 py-1 rounded-md w-fit">
-                                        <span>8zLQq...CdAi</span>
-                                        <button className="hover:text-white">
+                                    <h1 className="text-2xl font-bold mb-1">{userData?.username || "Anonymous User"}</h1>
+                                    <div className="flex items-center gap-2 text-sm text-[var(--muted)] bg-[var(--input-bg)] px-2 py-1 rounded-md w-fit">
+                                        <span>{walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}</span>
+                                        <button onClick={() => copyToClipboard(walletAddress || "")} className="hover:text-[var(--foreground)]">
                                             <Copy size={14} />
                                         </button>
-                                        <a href="#" className="flex items-center gap-1 hover:text-white ml-2">
-                                            View on solscan <ExternalLink size={14} />
+                                        <a 
+                                            href={`https://cardanoscan.io/address/${walletAddress}`} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 hover:text-[var(--foreground)] ml-2"
+                                        >
+                                            View on Cardanoscan <ExternalLink size={14} />
                                         </a>
                                     </div>
                                 </div>
                             </div>
-                            <button className="bg-[#1a1b1f] hover:bg-[#27272a] text-white px-6 py-2 rounded-md font-medium transition-colors">
-                                edit
+                            <button className="bg-[var(--input-bg)] hover:bg-[var(--border-color)] text-[var(--foreground)] px-6 py-2 rounded-md font-medium transition-colors border border-[var(--border-color)]">
+                                Edit Profile
                             </button>
                         </div>
 
                         {/* Stats */}
                         <div className="flex gap-8 mb-10 text-sm">
                             <div className="flex flex-col items-center">
-                                <span className="font-bold text-lg">0</span>
-                                <span className="text-gray-400">Followers</span>
+                                <span className="font-bold text-lg">{userData?.followers || 0}</span>
+                                <span className="text-[var(--muted)]">Followers</span>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="font-bold text-lg">0</span>
-                                <span className="text-gray-400">Following</span>
+                                <span className="font-bold text-lg">{userData?.following || 0}</span>
+                                <span className="text-[var(--muted)]">Following</span>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="font-bold text-lg">0</span>
-                                <span className="text-gray-400">Created coins</span>
+                                <span className="font-bold text-lg">{createdCoins.length}</span>
+                                <span className="text-[var(--muted)]">Created coins</span>
                             </div>
                         </div>
 
                         {/* Tabs */}
-                        <div className="border-b border-gray-800 mb-6 overflow-x-auto">
+                        <div className="border-b border-[var(--border-color)] mb-6 overflow-x-auto">
                             <div className="flex gap-6 min-w-max">
                                 {tabs.map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === tab
-                                            ? "text-green-400"
-                                            : "text-gray-400 hover:text-white"
+                                            ? "text-green-500"
+                                            : "text-[var(--muted)] hover:text-[var(--foreground)]"
                                             }`}
                                     >
                                         {tab}
                                         {activeTab === tab && (
-                                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-400 rounded-t-full" />
+                                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-green-500 rounded-t-full" />
                                         )}
                                     </button>
                                 ))}
@@ -92,33 +178,54 @@ export default function ProfilePage() {
                         <div className="min-h-[300px]">
                             {activeTab === "Balances" && (
                                 <div>
-                                    <div className="flex justify-between text-sm text-gray-500 mb-4 px-2">
+                                    <div className="flex justify-between text-sm text-[var(--muted)] mb-4 px-2">
                                         <span>Coins</span>
                                         <span>Value</span>
                                     </div>
-                                    <div className="bg-[#141519] rounded-xl p-4 flex items-center justify-between hover:bg-[#1a1b1f] transition-colors cursor-pointer group">
+                                    {/* Placeholder for ADA Balance - Real balance fetching would go here */}
+                                    <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4 flex items-center justify-between hover:bg-[var(--input-bg)] transition-colors cursor-pointer group">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-black border border-gray-800 flex items-center justify-center overflow-hidden">
+                                            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center overflow-hidden">
                                                 <img
-                                                    src="https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png"
-                                                    alt="SOL"
+                                                    src="https://cryptologos.cc/logos/cardano-ada-logo.png"
+                                                    alt="ADA"
                                                     className="w-6 h-6 object-contain"
                                                 />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-white group-hover:text-green-400 transition-colors">
-                                                    Solana balance
+                                                <div className="font-bold text-[var(--foreground)] group-hover:text-green-500 transition-colors">
+                                                    Cardano (ADA)
                                                 </div>
-                                                <div className="text-sm text-gray-500">0.00 SOL</div>
+                                                <div className="text-sm text-[var(--muted)]">0.00 ADA</div>
                                             </div>
                                         </div>
-                                        <div className="font-bold text-white">$0</div>
+                                        <div className="font-bold text-[var(--foreground)]">$0.00</div>
                                     </div>
                                 </div>
                             )}
 
-                            {activeTab !== "Balances" && (
-                                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                            {activeTab === "Coin Created" && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {createdCoins.length > 0 ? (
+                                        createdCoins.map((coin) => (
+                                            <div key={coin.id} className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-4 hover:bg-[var(--input-bg)] transition-colors">
+                                                <img src={coin.image || "/placeholder.png"} alt={coin.name} className="w-12 h-12 rounded-full object-cover" />
+                                                <div>
+                                                    <div className="font-bold">{coin.name}</div>
+                                                    <div className="text-sm text-[var(--muted)]">{coin.symbol}</div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full flex flex-col items-center justify-center py-10 text-[var(--muted)]">
+                                            <p>No coins created yet.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab !== "Balances" && activeTab !== "Coin Created" && (
+                                <div className="flex flex-col items-center justify-center py-20 text-[var(--muted)]">
                                     <div className="mb-4 text-4xl opacity-20">📭</div>
                                     <p>No {activeTab.toLowerCase()} yet</p>
                                 </div>

@@ -103,6 +103,41 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setIsConnected(true);
       localStorage.setItem("walletAddress", bech32Address);
       localStorage.setItem("walletName", walletName);
+
+      // 7. Save/Update User in Firebase
+      try {
+        const { db } = await import("../lib/firebase");
+        const { doc, getDoc, setDoc, serverTimestamp } = await import("firebase/firestore");
+        
+        const userRef = doc(db, "users", bech32Address);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          // Create new user
+          await setDoc(userRef, {
+            walletAddress: bech32Address,
+            username: `User_${bech32Address.slice(0, 6)}`, // Default username
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+            coinsCreated: 0,
+            coinsHeld: 0,
+            followers: 0,
+            following: 0,
+            friends: 0,
+            metadata: {}
+          });
+          toast.success("Profile created!");
+        } else {
+          // Update last login
+          await setDoc(userRef, {
+            lastLogin: serverTimestamp()
+          }, { merge: true });
+        }
+      } catch (firebaseError) {
+        console.error("Error saving user to Firebase:", firebaseError);
+        // Don't block wallet connection if firebase fails, just log it
+      }
+
       toast.success("Wallet connected successfully!");
       
     } catch (error: any) {
