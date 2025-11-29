@@ -1,80 +1,143 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Sprout, User, MessageCircle } from "lucide-react";
 import { SEARCH_RESULTS } from "@/data/constants";
+import { useState, useEffect } from "react";
+import { searchUsers, UserProfile } from "@/lib/user";
+import { useRouter } from "next/navigation";
 
 interface SearchResultsProps {
   onClose: () => void;
+  searchQuery?: string;
 }
 
-export default function SearchResults({ onClose }: SearchResultsProps) {
+export default function SearchResults({ onClose, searchQuery = "" }: SearchResultsProps) {
+  const [userResults, setUserResults] = useState<UserProfile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const router = useRouter();
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        setIsSearching(true);
+        try {
+          const results = await searchUsers(searchQuery);
+          setUserResults(results);
+        } catch (error) {
+          console.error("Search failed:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setUserResults([]);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleUserClick = (walletAddress: string) => {
+    router.push(`/profile/${walletAddress}`);
+    onClose();
+  };
+
+  // Filter coins based on search query (simple client-side filter)
+  const filteredCoins = SEARCH_RESULTS.coins.filter(coin =>
+    coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    coin.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="absolute top-full left-0 w-full mt-2 bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] shadow-2xl overflow-hidden z-50">
       <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
         {/* Coins Section */}
         <div className="p-2">
-          {SEARCH_RESULTS.coins.map((coin, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg cursor-pointer group transition-colors"
-              onClick={onClose}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden text-xs font-bold text-[var(--foreground)]">
-                  {/* Placeholder Image */}
-                  {coin.name[0]}
+          <h3 className="text-xs font-semibold text-[var(--muted)] px-2 mb-2 uppercase tracking-wider">
+            Coins
+          </h3>
+          {filteredCoins.length > 0 ? (
+            filteredCoins.map((coin, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg cursor-pointer group transition-colors"
+                onClick={onClose}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden text-xs font-bold text-[var(--foreground)]">
+                    {/* Placeholder Image */}
+                    <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                    <span className="absolute">{coin.name[0]}</span>
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-[var(--foreground)]">
+                      {coin.name}
+                    </div>
+                    <div className="text-xs text-[var(--muted)]">
+                      {coin.symbol}
+                    </div>
+                  </div>
                 </div>
-                <div>
+                <div className="text-right">
                   <div className="font-bold text-sm text-[var(--foreground)]">
-                    {coin.name}
+                    {coin.price}
                   </div>
-                  <div className="text-xs text-[var(--muted)]">
-                    {coin.symbol}
+                  <div className="flex items-center justify-end gap-1 text-xs text-[var(--muted)] border border-[var(--border-color)] rounded px-1.5 py-0.5 mt-1">
+                    <Sprout size={10} />
+                    <span>{coin.age}</span>
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-sm text-[var(--foreground)]">
-                  {coin.price}
-                </div>
-                <div className="flex items-center justify-end gap-1 text-xs text-[var(--muted)] border border-[var(--border-color)] rounded px-1.5 py-0.5 mt-1">
-                  <Sprout size={10} />
-                  <span>{coin.age}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="px-4 py-2 text-sm text-[var(--muted)]">No coins found.</div>
+          )}
         </div>
 
         {/* Users Section */}
         <div className="p-2 border-t border-[var(--border-color)]">
-          <h3 className="text-xs font-semibold text-[var(--muted)] px-2 mb-2">
-            Users
+          <h3 className="text-xs font-semibold text-[var(--muted)] px-2 mb-2 uppercase tracking-wider">
+            Users {isSearching && "(Searching...)"}
           </h3>
-          {SEARCH_RESULTS.users.map((user, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg cursor-pointer group transition-colors"
-              onClick={onClose}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden text-[var(--foreground)]">
-                  <User size={16} />
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-[var(--foreground)]">
-                    {user.name}
+          {userResults.length > 0 ? (
+            userResults.map((user) => (
+              <div
+                key={user.walletAddress}
+                className="flex items-center justify-between p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg cursor-pointer group transition-colors"
+                onClick={() => handleUserClick(user.walletAddress)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden text-[var(--foreground)]">
+                    <User size={16} />
                   </div>
-                  <div className="text-xs text-[var(--muted)]">
-                    {user.followers}
+                  <div>
+                    <div className="font-bold text-sm text-[var(--foreground)]">
+                      {user.username}
+                    </div>
+                    <div className="text-xs text-[var(--muted)]">
+                      {user.followers} followers
+                    </div>
                   </div>
                 </div>
+                <button
+                  className="w-8 h-8 rounded-lg bg-green-500 hover:bg-green-600 flex items-center justify-center text-black transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/chat?chatWith=${user.walletAddress}`);
+                    onClose();
+                  }}
+                >
+                  <MessageCircle size={16} />
+                </button>
               </div>
-              <button className="w-8 h-8 rounded-lg bg-green-500 hover:bg-green-600 flex items-center justify-center text-black transition-colors">
-                <MessageCircle size={16} />
-              </button>
+            ))
+          ) : (
+            <div className="px-4 py-2 text-sm text-[var(--muted)]">
+              {searchQuery.trim() ? "No users found." : "Type to search users..."}
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

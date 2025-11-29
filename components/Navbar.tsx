@@ -90,7 +90,10 @@ export default function Navbar() {
 
           {/* Search Results Dropdown */}
           {showResults && (
-            <SearchResults onClose={() => setShowResults(false)} />
+            <SearchResults
+              onClose={() => setShowResults(false)}
+              searchQuery={searchQuery}
+            />
           )}
         </div>
 
