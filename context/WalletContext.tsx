@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { toast } from "sonner";
 import { Lucid, Blockfrost } from "lucid-cardano";
 import WalletSelectorModal from "../components/WalletSelectorModal";
@@ -22,15 +28,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletName, setWalletName] = useState<string | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
-  
+
   // New state for wallet selection
   const [availableWallets, setAvailableWallets] = useState<string[]>([]);
   const [showWalletSelector, setShowWalletSelector] = useState(false);
 
   useEffect(() => {
-    // Check if previously connected
+    if (typeof window === "undefined") return;
+
     const savedAddress = localStorage.getItem("walletAddress");
     const savedWalletName = localStorage.getItem("walletName");
+
     if (savedAddress && savedWalletName) {
       setWalletAddress(savedAddress);
       setWalletName(savedWalletName);
@@ -43,35 +51,54 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // 1. Check for Blockfrost Project ID
       const blockfrostId = process.env.NEXT_PUBLIC_BLOCKFROST_PROJECT_ID;
       if (!blockfrostId) {
-        toast.error("Configuration Error: Blockfrost Project ID is missing. Please check your .env file.");
+        toast.error(
+          "Configuration Error: Blockfrost Project ID is missing. Please check your .env file.",
+        );
         return;
       }
 
       // 2. Check for Cardano object
+      if (typeof window === "undefined") {
+        toast.error("Wallet cannot be connected during SSR.");
+        return;
+      }
       const cardano = (window as any).cardano;
+
       if (!cardano) {
         setShowInstallGuide(true);
         return;
       }
 
       // 3. Detect available wallets (CIP-30)
-      const supportedWallets = ["nami", "eternl", "lace", "yoroi", "flint", "typhoncip30", "gero", "nufi"];
-      
+      const supportedWallets = [
+        "nami",
+        "eternl",
+        "lace",
+        "yoroi",
+        "flint",
+        "typhoncip30",
+        "gero",
+        "nufi",
+      ];
+
       // Find all available wallets
-      const foundWallets = supportedWallets.filter(name => cardano[name]);
-      
+      const foundWallets = supportedWallets.filter((name) => cardano[name]);
+
       // Fallback: check for other keys
       if (foundWallets.length === 0) {
-         const potentialWallets = Object.keys(cardano).filter(key => 
-            typeof cardano[key] === 'object' && 
-            cardano[key] !== null && 
-            'enable' in cardano[key]
-         );
-         foundWallets.push(...potentialWallets);
+        const potentialWallets = Object.keys(cardano).filter(
+          (key) =>
+            typeof cardano[key] === "object" &&
+            cardano[key] !== null &&
+            "enable" in cardano[key],
+        );
+        foundWallets.push(...potentialWallets);
       }
 
       if (foundWallets.length === 0) {
-        toast.error("No supported Cardano wallet found. Please install Nami, Eternl, or Lace.");
+        toast.error(
+          "No supported Cardano wallet found. Please install Nami, Eternl, or Lace.",
+        );
         return;
       }
 
@@ -84,7 +111,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       // If only one wallet, connect directly
       await selectWallet(foundWallets[0]);
-
     } catch (error: any) {
       console.error("Wallet connection initialization failed", error);
       toast.error(error.message || "Failed to initialize wallet connection.");
@@ -94,19 +120,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const selectWallet = async (selectedWalletName: string) => {
     try {
       setShowWalletSelector(false);
+      if (typeof window === "undefined") {
+        toast.error("Wallet cannot be connected during SSR.");
+        return;
+      }
       const cardano = (window as any).cardano;
-      
+
       toast.info(`Connecting to ${selectedWalletName}...`);
 
       // 4. Connect to wallet
       const api = await cardano[selectedWalletName].enable();
-      
+
       // 5. Get Address
       let addresses = await api.getUsedAddresses();
       if (addresses.length === 0) {
         addresses = await api.getUnusedAddresses();
       }
-      
+
       if (addresses.length === 0) {
         toast.error("No addresses found in wallet.");
         return;
@@ -116,7 +146,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const { initLucid } = await import("../lib/cardano");
       const lucid = await initLucid(api);
       const bech32Address = await lucid.wallet.address();
-      
+
       setWalletAddress(bech32Address);
       setWalletName(selectedWalletName);
       setIsConnected(true);
@@ -126,8 +156,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // 7. Save/Update User in Firebase
       try {
         const { db } = await import("../lib/firebase");
-        const { doc, getDoc, setDoc, serverTimestamp } = await import("firebase/firestore");
-        
+        const { doc, getDoc, setDoc, serverTimestamp } =
+          await import("firebase/firestore");
+
         const userRef = doc(db, "users", bech32Address);
         const userSnap = await getDoc(userRef);
 
@@ -142,28 +173,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             followers: 0,
             following: 0,
             friends: 0,
-            metadata: {}
+            metadata: {},
           });
           toast.success("Profile created!");
         } else {
-          await setDoc(userRef, {
-            lastLogin: serverTimestamp()
-          }, { merge: true });
+          await setDoc(
+            userRef,
+            {
+              lastLogin: serverTimestamp(),
+            },
+            { merge: true },
+          );
         }
       } catch (firebaseError) {
         console.error("Error saving user to Firebase:", firebaseError);
       }
 
       toast.success("Wallet connected successfully!");
-      
     } catch (error: any) {
       console.error("Wallet connection failed", error);
       if (error.info && error.info.includes("User declined")) {
-         toast.error("Connection rejected by user.");
+        toast.error("Connection rejected by user.");
       } else if (error.message && error.message.includes("Blockfrost")) {
-         toast.error("Blockfrost configuration error. Check console for details.");
+        toast.error(
+          "Blockfrost configuration error. Check console for details.",
+        );
       } else {
-         toast.error(error.message || "Failed to connect wallet.");
+        toast.error(error.message || "Failed to connect wallet.");
       }
     }
   };
@@ -178,11 +214,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider
-      value={{ isConnected, walletAddress, walletName, showInstallGuide, setShowInstallGuide, connectWallet, disconnectWallet }}
+      value={{
+        isConnected,
+        walletAddress,
+        walletName,
+        showInstallGuide,
+        setShowInstallGuide,
+        connectWallet,
+        disconnectWallet,
+      }}
     >
       {children}
       {/* Dynamic import or conditional render for the modal to avoid circular deps if any, though direct import is fine usually */}
-      <WalletSelectorModal 
+      <WalletSelectorModal
         isOpen={showWalletSelector}
         onClose={() => setShowWalletSelector(false)}
         wallets={availableWallets}

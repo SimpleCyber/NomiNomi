@@ -33,16 +33,8 @@ export const Sparkline = ({ data, isPositive }: SparklineProps) => {
           y1="0"
           y2="1"
         >
-          <stop
-            offset="0%"
-            stopColor={color}
-            stopOpacity="0.2"
-          />
-          <stop
-            offset="100%"
-            stopColor={color}
-            stopOpacity="0"
-          />
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       <polyline

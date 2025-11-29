@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Search,
-  PlusCircle,
-} from "lucide-react";
+import { Search, PlusCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { SidebarContent } from "./Sidebar";
 import SearchResults from "./SearchResults";
@@ -15,7 +12,13 @@ import WalletInstallGuide from "./WalletInstallGuide";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isConnected, walletAddress, connectWallet, showInstallGuide, setShowInstallGuide } = useWallet();
+  const {
+    isConnected,
+    walletAddress,
+    connectWallet,
+    showInstallGuide,
+    setShowInstallGuide,
+  } = useWallet();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
@@ -111,7 +114,9 @@ export default function Navbar() {
                   <User size={14} />
                 </div>
                 <span>
-                  {walletAddress ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-5)}` : "Connected"}
+                  {walletAddress
+                    ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-5)}`
+                    : "Connected"}
                 </span>
                 <ChevronDown size={14} className="text-[var(--muted)]" />
               </button>

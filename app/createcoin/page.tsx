@@ -16,8 +16,12 @@ export default function CreateCoinPage() {
           <Navbar />
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4">Please connect your wallet</h2>
-              <p className="text-[var(--muted)]">Connect your wallet to create a coin.</p>
+              <h2 className="text-2xl font-bold mb-4">
+                Please connect your wallet
+              </h2>
+              <p className="text-[var(--muted)]">
+                Connect your wallet to create a coin.
+              </p>
             </div>
           </div>
         </div>
