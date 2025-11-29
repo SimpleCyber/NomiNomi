@@ -12,15 +12,18 @@ const wallets = [
     name: "Eternl",
     description: "Feature-rich wallet",
     icon: "🔷",
-    chromeUrl: "https://chrome.google.com/webstore/detail/eternl/kmhcihpebfmpgmihbkipmjlmmioameka",
+    chromeUrl:
+      "https://chrome.google.com/webstore/detail/eternl/kmhcihpebfmpgmihbkipmjlmmioameka",
     firefoxUrl: "https://addons.mozilla.org/en-US/firefox/addon/eternl/",
-    edgeUrl: "https://microsoftedge.microsoft.com/addons/detail/eternl/dkdgdkdkdkdkdkdkdkdkdkdk",
+    edgeUrl:
+      "https://microsoftedge.microsoft.com/addons/detail/eternl/dkdgdkdkdkdkdkdkdkdkdkdk",
   },
   {
     name: "Nami",
     description: "Simple & user-friendly",
     icon: "🌊",
-    chromeUrl: "https://chrome.google.com/webstore/detail/nami/lpfcbjknijpeeillifnkikgncikgfhdo",
+    chromeUrl:
+      "https://chrome.google.com/webstore/detail/nami/lpfcbjknijpeeillifnkikgncikgfhdo",
     firefoxUrl: "https://addons.mozilla.org/en-US/firefox/addon/nami-wallet/",
     edgeUrl: "https://microsoftedge.microsoft.com/addons/detail/nami/nami",
   },
@@ -28,7 +31,8 @@ const wallets = [
     name: "Lace",
     description: "Modern by Input Output",
     icon: "🎴",
-    chromeUrl: "https://chrome.google.com/webstore/detail/lace/gafhhkghbfjjkeiendhlofajokpaflmk",
+    chromeUrl:
+      "https://chrome.google.com/webstore/detail/lace/gafhhkghbfjjkeiendhlofajokpaflmk",
     firefoxUrl: "https://addons.mozilla.org/en-US/firefox/addon/lace-wallet/",
     edgeUrl: "https://microsoftedge.microsoft.com/addons/detail/lace/lace",
   },
@@ -36,13 +40,17 @@ const wallets = [
     name: "Yoroi",
     description: "Light wallet by Emurgo",
     icon: "⚡",
-    chromeUrl: "https://chrome.google.com/webstore/detail/yoroi/ffnbelfdoeiohenkjibnmadjiehjhajb",
+    chromeUrl:
+      "https://chrome.google.com/webstore/detail/yoroi/ffnbelfdoeiohenkjibnmadjiehjhajb",
     firefoxUrl: "https://addons.mozilla.org/en-US/firefox/addon/yoroi/",
     edgeUrl: "https://microsoftedge.microsoft.com/addons/detail/yoroi/yoroi",
   },
 ];
 
-export default function WalletInstallGuide({ isOpen, onClose }: WalletInstallGuideProps) {
+export default function WalletInstallGuide({
+  isOpen,
+  onClose,
+}: WalletInstallGuideProps) {
   if (!isOpen) return null;
 
   const detectBrowser = () => {
@@ -52,7 +60,7 @@ export default function WalletInstallGuide({ isOpen, onClose }: WalletInstallGui
     return "chrome";
   };
 
-  const getInstallUrl = (wallet: typeof wallets[0]) => {
+  const getInstallUrl = (wallet: (typeof wallets)[0]) => {
     const browser = detectBrowser();
     if (browser === "firefox") return wallet.firefoxUrl;
     if (browser === "edge") return wallet.edgeUrl;
@@ -67,7 +75,7 @@ export default function WalletInstallGuide({ isOpen, onClose }: WalletInstallGui
           Choose a wallet to get started
         </p>
       </div>
-      
+
       <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
         <div className="p-2">
           {wallets.map((wallet) => (
@@ -96,9 +104,10 @@ export default function WalletInstallGuide({ isOpen, onClose }: WalletInstallGui
             </a>
           ))}
         </div>
-        
+
         <div className="p-3 bg-blue-500/10 border-t border-blue-500/20 text-xs text-[var(--foreground)]">
-          <strong>After installing:</strong> Refresh this page and click "Connect Wallet" again.
+          <strong>After installing:</strong> Refresh this page and click
+          "Connect Wallet" again.
         </div>
       </div>
     </div>

@@ -33,13 +33,13 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       alert("Please connect wallet");
       return;
     }
-    
+
     setIsBuying(true);
     try {
       const cardano = (window as any).cardano;
       const walletName = cardano.nami ? "nami" : "eternl";
       const walletApi = await cardano[walletName].enable();
-      
+
       const txHash = await buyToken(walletApi, token, parseFloat(buyAmount));
       console.log("Buy Tx:", txHash);
       toast.success("Buy transaction submitted!");
@@ -59,7 +59,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       const cardano = (window as any).cardano;
       const walletName = cardano.nami ? "nami" : "eternl";
       const walletApi = await cardano[walletName].enable();
-      
+
       const txHash = await launchLP(walletApi, token);
       console.log("LP Launch Tx:", txHash);
       toast.success("LP Launch submitted!");
@@ -71,7 +71,12 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     }
   };
 
-  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
+  if (loading)
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
   if (!token) return <div className="p-8">Token not found</div>;
 
   return (
@@ -81,32 +86,63 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
         <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6">
           <div className="flex items-start gap-4 mb-6">
             <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[var(--input-bg)]">
-              {token.image && <Image src={token.image} alt={token.name} fill className="object-cover" />}
+              {token.image && (
+                <Image
+                  src={token.image}
+                  alt={token.name}
+                  fill
+                  className="object-cover"
+                />
+              )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{token.name} <span className="text-[var(--muted)] text-lg">({token.symbol})</span></h1>
+              <h1 className="text-2xl font-bold">
+                {token.name}{" "}
+                <span className="text-[var(--muted)] text-lg">
+                  ({token.symbol})
+                </span>
+              </h1>
               <p className="text-[var(--muted)] mt-1">{token.description}</p>
               <div className="flex gap-3 mt-3">
-                {token.website && <a href={token.website} target="_blank" className="text-blue-400 hover:underline flex items-center gap-1 text-sm"><ExternalLink size={14} /> Website</a>}
-                {token.twitter && <a href={token.twitter} target="_blank" className="text-blue-400 hover:underline flex items-center gap-1 text-sm"><ExternalLink size={14} /> Twitter</a>}
+                {token.website && (
+                  <a
+                    href={token.website}
+                    target="_blank"
+                    className="text-blue-400 hover:underline flex items-center gap-1 text-sm"
+                  >
+                    <ExternalLink size={14} /> Website
+                  </a>
+                )}
+                {token.twitter && (
+                  <a
+                    href={token.twitter}
+                    target="_blank"
+                    className="text-blue-400 hover:underline flex items-center gap-1 text-sm"
+                  >
+                    <ExternalLink size={14} /> Twitter
+                  </a>
+                )}
               </div>
             </div>
           </div>
-          
+
           {/* Bonding Curve Progress */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Bonding Curve Progress</span>
-              <span>{((token.raisedAda || 0) / 5 * 100).toFixed(2)}%</span>
+              <span>{(((token.raisedAda || 0) / 5) * 100).toFixed(2)}%</span>
             </div>
             <div className="h-4 bg-[var(--input-bg)] rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-green-500 transition-all duration-500"
-                style={{ width: `${Math.min((token.raisedAda || 0) / 5 * 100, 100)}%` }}
+                style={{
+                  width: `${Math.min(((token.raisedAda || 0) / 5) * 100, 100)}%`,
+                }}
               />
             </div>
             <p className="text-xs text-[var(--muted)]">
-              When the market cap reaches 5 ADA, all liquidity is deposited into Minswap and burned.
+              When the market cap reaches 5 ADA, all liquidity is deposited into
+              Minswap and burned.
             </p>
           </div>
 
@@ -124,7 +160,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
           )}
         </div>
-        
+
         {/* Chart Placeholder */}
         <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6 h-96 flex items-center justify-center text-[var(--muted)]">
           Chart will be here
@@ -135,16 +171,18 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       <div className="space-y-6">
         <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6">
           <h2 className="text-xl font-bold mb-4">Buy {token.symbol}</h2>
-          
+
           <div className="space-y-4">
             <div className="bg-[var(--input-bg)] rounded-lg p-4 border border-[var(--border-color)]">
               <div className="flex justify-between mb-2">
                 <span className="text-sm text-[var(--muted)]">You pay</span>
-                <span className="text-sm text-[var(--muted)]">Balance: 0 ADA</span>
+                <span className="text-sm text-[var(--muted)]">
+                  Balance: 0 ADA
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={buyAmount}
                   onChange={(e) => setBuyAmount(e.target.value)}
                   placeholder="0.0"
@@ -154,7 +192,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
               </div>
             </div>
 
-            <button 
+            <button
               onClick={handleBuy}
               disabled={isBuying || !buyAmount}
               className="w-full bg-green-500 text-black font-bold py-3 rounded-lg hover:bg-green-400 transition-colors disabled:opacity-50"

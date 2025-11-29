@@ -44,7 +44,9 @@ export default function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
         <div className="space-y-6">
           <div className="bg-[var(--input-bg)] rounded-lg p-4 border border-[var(--border-color)]">
-            <p className="text-sm text-[var(--muted)] mb-1">Connected Address</p>
+            <p className="text-sm text-[var(--muted)] mb-1">
+              Connected Address
+            </p>
             <div className="flex items-center justify-between gap-2">
               <code className="text-sm font-mono break-all text-[var(--foreground)]">
                 {walletAddress}

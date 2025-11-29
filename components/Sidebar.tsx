@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import {
-  ChevronLeft,
-  Sun,
-  Moon,
-} from "lucide-react";
+import { ChevronLeft, Sun, Moon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MENU_ITEMS, BOTTOM_MENU_ITEMS } from "@/data/constants";
@@ -24,7 +20,10 @@ export function SidebarContent({
 }) {
   const { theme, setTheme } = useTheme();
   const pathname = usePathname();
-  const [hoveredItem, setHoveredItem] = useState<{ name: string; top: number } | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<{
+    name: string;
+    top: number;
+  } | null>(null);
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -123,7 +122,10 @@ export function SidebarContent({
           onMouseEnter={(e) => {
             if (isCollapsed) {
               const rect = e.currentTarget.getBoundingClientRect();
-              setHoveredItem({ name: theme === "dark" ? "Dark Mode" : "Light Mode", top: rect.top });
+              setHoveredItem({
+                name: theme === "dark" ? "Dark Mode" : "Light Mode",
+                top: rect.top,
+              });
             }
           }}
           onMouseLeave={() => setHoveredItem(null)}
@@ -169,7 +171,7 @@ export function SidebarContent({
 
       {/* Shared Tooltip */}
       {isCollapsed && hoveredItem && (
-        <div 
+        <div
           className="fixed left-[4rem] px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-200"
           style={{ top: hoveredItem.top + 8 }}
         >
