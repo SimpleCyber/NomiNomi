@@ -8,7 +8,9 @@ import { initLucid } from "./cardano";
 export const MINTING_POLICY_CBOR = ""; 
 export const BONDING_CURVE_CBOR = "";
 
-export const PLATFORM_FEE_ADDRESS = "addr1q9zqmfvgpdd5tlh7jk3fhnrr3rjcl8mkknkw3j2233tyh7j8kqykw07ktc6wqmrql4alr45f9qqcpcsteypsemf5l4cscxmajm";
+// TODO: Use a valid Testnet address for Preprod. This is a dummy Testnet address.
+export const PLATFORM_FEE_ADDRESS = "addr_test1qpzqmfvgpdd5tlh7jk3fhnrr3rjcl8mkknkw3j2233tyh7j8kqykw07ktc6wqmrql4alr45f9qqcpcsteypsemf5l4csmsxa7y"; 
+// Ideally, put this in .env.local: NEXT_PUBLIC_PLATFORM_FEE_ADDRESS
 
 const DECIMALS = 1_000_000_000_000_000_000n; // 10^18
 const INITIAL_PRICE = 30_000_000_000_000n; // 3 * 10^13
