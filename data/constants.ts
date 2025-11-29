@@ -209,9 +209,9 @@ export const MARKETS: Market[] = [
 export const MENU_ITEMS: MenuItem[] = [
   { name: "Home", icon: Home, href: "/" },
   { name: "Live stream", icon: Tv, href: "/livestream" },
-  { name: "Chat Friends", icon: MessageCircle, href: "#" },
+  { name: "Chat Friends", icon: MessageCircle, href: "/chat" },
   { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
-  { name: "My Profile", icon: User, href: "#" },
+  { name: "My Profile", icon: User, href: "/profile" },
   { name: "Create coin", icon: PlusCircle, href: "/createcoin" },
 ];
 
