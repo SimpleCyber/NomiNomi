@@ -54,7 +54,7 @@ export default function ProfilePage() {
 
     // Fetch wallet balances (ADA + Native Tokens)
     const fetchWalletBalances = async () => {
-        if (!walletName || !(window as any).cardano) {
+        if (typeof window === 'undefined' || !walletName || !(window as any).cardano) {
             return;
         }
 
@@ -157,8 +157,10 @@ export default function ProfilePage() {
     }, [isConnected, walletAddress]);
 
     const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard!");
+        if (typeof navigator !== 'undefined') {
+            navigator.clipboard.writeText(text);
+            toast.success("Copied to clipboard!");
+        }
     };
 
     // Helper to determine which data to show
