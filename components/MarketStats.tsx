@@ -211,7 +211,7 @@ export default function MarketStats() {
         newUsedIds.add(newCoinToSet.id);
         setUsedCoinIds(newUsedIds);
       }
-    }, 5000); // 5 seconds
+    }, 3000); // 5 seconds
 
     return () => clearInterval(interval);
   }, [allCoins, usedCoinIds, popularCoin]);
