@@ -170,7 +170,7 @@ export function SidebarContent({
       {/* Shared Tooltip */}
       {isCollapsed && hoveredItem && (
         <div 
-          className="fixed left-[4.5rem] px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-200"
+          className="fixed left-[4rem] px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-200"
           style={{ top: hoveredItem.top + 8 }}
         >
           {hoveredItem.name}
