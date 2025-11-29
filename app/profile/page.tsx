@@ -9,11 +9,13 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { toast } from "sonner";
 import EditProfileModal from "@/components/EditProfileModal";
+import { initLucid } from "@/lib/cardano";
 
 export default function ProfilePage() {
-    const { isConnected, walletAddress } = useWallet();
+    const { isConnected, walletAddress, walletName } = useWallet();
     const [activeTab, setActiveTab] = useState("Balances");
     const [userData, setUserData] = useState<any>(null);
+    const [balance, setBalance] = useState<string>("0.00");
     const [createdCoins, setCreatedCoins] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -55,9 +57,24 @@ export default function ProfilePage() {
         }
     };
 
+    const fetchBalance = async () => {
+        if (walletName && (window as any).cardano) {
+            try {
+                const api = await (window as any).cardano[walletName].enable();
+                const lucid = await initLucid(api);
+                const utxos = await lucid.wallet.getUtxos();
+                const lovelace = utxos.reduce((acc, u) => acc + u.assets.lovelace, 0n);
+                setBalance((Number(lovelace) / 1_000_000).toFixed(2));
+            } catch (err) {
+                console.error("Error fetching balance:", err);
+            }
+        }
+    };
+
     useEffect(() => {
         if (isConnected) {
             fetchData();
+            fetchBalance();
         } else {
             setLoading(false);
         }
@@ -209,10 +226,13 @@ export default function ProfilePage() {
                                                 <div className="font-bold text-[var(--foreground)] group-hover:text-green-500 transition-colors">
                                                     Cardano (ADA)
                                                 </div>
-                                                <div className="text-sm text-[var(--muted)]">0.00 ADA</div>
+                                                <div className="text-sm text-[var(--muted)]">{balance} ADA</div>
                                             </div>
                                         </div>
-                                        <div className="font-bold text-[var(--foreground)]">$0.00</div>
+                                        <div className="font-bold text-[var(--foreground)]">
+                                            {/* Approximate USD value (placeholder rate) */}
+                                            ${(parseFloat(balance) * 0.4).toFixed(2)}
+                                        </div>
                                     </div>
                                 </div>
                             )}

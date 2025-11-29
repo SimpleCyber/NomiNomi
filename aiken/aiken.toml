@@ -1,0 +1,11 @@
+name = "nominomi/backpack"
+version = "0.0.0"
+compiler = "v1.1.19"
+plutus = "v3"
+licence = "Apache-2.0"
+description = "Aiken smart contracts for NomiNomi"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "v3.0.0"
+source = "github"
