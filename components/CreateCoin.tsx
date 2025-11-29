@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
-  Upload,
   X,
   ChevronDown,
   ChevronUp,
@@ -11,7 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Image from "next/image";
-import { uploadToIPFS, uploadJSONToIPFS } from "../lib/ipfs";
+import { uploadJSONToIPFS } from "../lib/ipfs";
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -30,24 +29,10 @@ export default function CreateCoin() {
   const [showSocials, setShowSocials] = useState(false);
   const [showBannerUpload, setShowBannerUpload] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { walletAddress, isConnected, walletName } = useWallet();
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
 
 
@@ -55,14 +40,24 @@ export default function CreateCoin() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
+    // Query only by creatorAddress to avoid composite index requirement
     const q = query(
       collection(db, "memecoins"),
-      where("creatorAddress", "==", address),
-      where("createdAt", ">=", Timestamp.fromDate(thirtyDaysAgo))
+      where("creatorAddress", "==", address)
     );
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.size;
+    
+    // Filter client-side
+    const recentCoins = querySnapshot.docs.filter(doc => {
+      const data = doc.data();
+      if (!data.createdAt) return false;
+      // Handle Firestore Timestamp
+      const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+      return createdAt >= thirtyDaysAgo;
+    });
+
+    return recentCoins.length;
   };
 
   const computeMetadataHash = async (metadata: any) => {
@@ -81,8 +76,8 @@ export default function CreateCoin() {
       return;
     }
 
-    if (!name || !ticker || !description || !imageFile) {
-      setError("Please fill in all required fields and upload an image.");
+    if (!name || !ticker || !description || !imagePreview) {
+      setError("Please fill in all required fields and provide an image URL.");
       return;
     }
 
@@ -96,8 +91,8 @@ export default function CreateCoin() {
         throw new Error("Anti-Rug Policy: You have created 30 coins in the last 30 days. Please wait.");
       }
 
-      // 1. Upload image to IPFS
-      const imageIpfsUrl = await uploadToIPFS(imageFile);
+      // 1. Use Image URL directly
+      const imageIpfsUrl = imagePreview;
 
       // 2. Create metadata
       const metadata = {
@@ -163,9 +158,7 @@ export default function CreateCoin() {
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -179,106 +172,22 @@ export default function CreateCoin() {
           </p>
         </div>
 
-        {/* Image Upload */}
-        <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6">
-          <div className="relative aspect-video w-full bg-[var(--input-bg)] rounded-lg overflow-hidden mb-4 group">
-            {imagePreview ? (
-              <>
-                <Image
-                  src={imagePreview}
-                  alt="Coin preview"
-                  fill
-                  className="object-cover"
-                />
-                <button
-                  onClick={triggerFileInput}
-                  className="absolute bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
-                >
-                  Replace
-                </button>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full">
-                <div
-                  className="w-full h-full flex flex-col items-center justify-center cursor-pointer"
-                  onClick={triggerFileInput}
-                >
-                  <Upload className="w-12 h-12 text-[var(--muted)] mb-4" />
-                  <p className="text-[var(--muted)] font-medium">
-                    Upload image
-                  </p>
-                </div>
-              </div>
-            )}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*,video/*"
-              className="hidden"
-            />
+        {/* Image URL Input */}
+        <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6 space-y-4">
+          <h3 className="font-medium">Coin Image</h3>
+          <div className="space-y-2">
+             <label className="text-sm text-[var(--muted)]">Image URL</label>
+             <input
+                type="text"
+                value={imagePreview || ""}
+                onChange={(e) => setImagePreview(e.target.value)}
+                placeholder="https://example.com/image.png"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-3 outline-none focus:border-blue-500 transition-colors"
+             />
+             <p className="text-xs text-[var(--muted)]">
+               Enter a direct link to an image (jpg, png, gif).
+             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-[var(--muted)]">
-            <div>
-              <div className="flex items-center gap-2 mb-1 text-[var(--foreground)] font-medium">
-                <span className="p-1 border border-[var(--border-color)] rounded">
-                  <Upload size={14} />
-                </span>
-                File size and type
-              </div>
-              <ul className="list-disc list-inside pl-1 space-y-1">
-                <li>Image - max 15mb. '.jpg', '.gif' or '.png' recommended</li>
-                <li>Video - max 30mb. '.mp4' recommended</li>
-              </ul>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1 text-[var(--foreground)] font-medium">
-                <span className="p-1 border border-[var(--border-color)] rounded">
-                  <Upload size={14} />
-                </span>
-                Resolution and aspect ratio
-              </div>
-              <ul className="list-disc list-inside pl-1 space-y-1">
-                <li>Image - min. 1000x1000px, 1:1 square recommended</li>
-                <li>Video - 16:9 or 9:16, 1080p+ recommended</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Banner Upload Accordion */}
-          {/* <div className="mt-6 pt-4 border-t border-[var(--border-color)]">
-            <button
-              onClick={() => setShowBannerUpload(!showBannerUpload)}
-              className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)] hover:text-blue-500 transition-colors"
-            >
-              <Upload size={16} />
-              Add banner (Optional)
-              {showBannerUpload ? (
-                <ChevronUp size={16} />
-              ) : (
-                <ChevronDown size={16} />
-              )}
-            </button>
-
-            {showBannerUpload && (
-              <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                <p className="text-sm text-[var(--muted)] mb-4">
-                  This will be shown on the coin page in addition to the coin
-                  image. images or animated gifs up to 5mb, 3:1 / 1500x500px
-                  original. You can only do this when creating the coin, and it
-                  cannot be changed later.
-                </p>
-                <div className="border-2 border-dashed border-[var(--border-color)] rounded-lg p-8 flex flex-col items-center justify-center text-center hover:bg-[var(--input-bg)] transition-colors cursor-pointer">
-                  <Upload className="w-8 h-8 text-[var(--muted)] mb-3" />
-                  <h3 className="font-medium mb-1">Upload file...</h3>
-                  <button className="bg-green-400 text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-500 transition-colors">
-                    Select file
-                  </button>
-                </div>
-              </div>
-            )}
-          </div> */}
         </div>
 
         {/* Inputs */}
@@ -420,6 +329,7 @@ export default function CreateCoin() {
                   alt="Preview"
                   fill
                   className="object-cover"
+                  unoptimized
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[var(--muted)]">

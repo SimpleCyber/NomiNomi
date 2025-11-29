@@ -1,10 +1,11 @@
-use aiken/transaction.{ScriptContext}
 use aiken/list
+use aiken/transaction.{ScriptContext, OutputReference}
 
-validator {
-  fn mint(redeemer: Void, ctx: ScriptContext) -> Bool {
-    // TODO: Implement fixed supply logic
-    // For now, allow minting if signature is present (simplified)
-    True
+validator(utxo_ref: OutputReference) {
+  fn mint(_redeemer: Void, ctx: ScriptContext) -> Bool {
+    let ScriptContext { transaction, .. } = ctx
+    
+    // Check if the specified UTxO is consumed in this transaction
+    list.any(transaction.inputs, fn(input) { input.output_reference == utxo_ref })
   }
 }
