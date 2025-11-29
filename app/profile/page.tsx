@@ -10,100 +10,12 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { toast } from "sonner";
 import EditProfileModal from "@/components/EditProfileModal";
+import { initLucid } from "@/lib/cardano";
 
-// Dummy Data
-const COINS_CREATED = [
-    {
-        id: 1,
-        name: "Cardano",
-        symbol: "ADA",
-        image: "https://cryptologos.cc/logos/cardano-ada-logo.png",
-        marketCap: "$15.2B",
-        age: "6y",
-        volume: "$350M",
-        change: "+2.4%",
-        description: "Proof-of-stake blockchain platform"
-    },
-    {
-        id: 2,
-        name: "Snek",
-        symbol: "SNEK",
-        image: "https://pbs.twimg.com/profile_images/1651662706342838274/j1a23d3o_400x400.jpg",
-        marketCap: "$45M",
-        age: "1y",
-        volume: "$1.2M",
-        change: "+15.7%",
-        description: "The chillest meme coin on Cardano"
-    },
-    {
-        id: 3,
-        name: "Hosky",
-        symbol: "HOSKY",
-        image: "https://pbs.twimg.com/profile_images/1457806286762315778/0A5V0q0P_400x400.jpg",
-        marketCap: "$12M",
-        age: "2y",
-        volume: "$500K",
-        change: "-5.2%",
-        description: "Premier low-quality meme coin"
-    },
-    {
-        id: 4,
-        name: "MinSwap",
-        symbol: "MIN",
-        image: "https://cryptologos.cc/logos/cardano-ada-logo.png", // Fallback/Generic
-        marketCap: "$25M",
-        age: "2y",
-        volume: "$800K",
-        change: "+1.1%",
-        description: "Multi-pool decentralized exchange"
-    }
-];
 
-const COINS_HELD = [
-    {
-        id: 1,
-        name: "Solana",
-        symbol: "SOL",
-        image: "https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png",
-        balance: "145.5 SOL",
-        value: "$24,560.50",
-        change: "+5.4%",
-        allocation: "45%"
-    },
-    {
-        id: 2,
-        name: "Cardano",
-        symbol: "ADA",
-        image: "https://cryptologos.cc/logos/cardano-ada-logo.png",
-        balance: "15,000 ADA",
-        value: "$8,250.00",
-        change: "+2.1%",
-        allocation: "15%"
-    },
-    {
-        id: 3,
-        name: "Bitcoin",
-        symbol: "BTC",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Bitcoin.svg/1200px-Bitcoin.svg.png",
-        balance: "0.25 BTC",
-        value: "$16,500.00",
-        change: "-1.2%",
-        allocation: "30%"
-    },
-    {
-        id: 4,
-        name: "Ethereum",
-        symbol: "ETH",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/1200px-Ethereum-icon-purple.svg.png",
-        balance: "1.5 ETH",
-        value: "$4,800.00",
-        change: "+0.8%",
-        allocation: "10%"
-    }
-];
 
 export default function ProfilePage() {
-    const { isConnected, walletAddress } = useWallet();
+    const { isConnected, walletAddress, walletName } = useWallet();
     const [activeTab, setActiveTab] = useState("Balances");
     const [viewMode, setViewMode] = useState<"list" | "grid">("list");
     const [selectedCoin, setSelectedCoin] = useState<any>(null);
@@ -113,6 +25,8 @@ export default function ProfilePage() {
     // Data states
     const [userData, setUserData] = useState<any>(null);
     const [createdCoins, setCreatedCoins] = useState<any[]>([]);
+    const [heldTokens, setHeldTokens] = useState<any[]>([]);
+    const [adaBalance, setAdaBalance] = useState<string>("0.00");
     const [loading, setLoading] = useState(true);
 
     const tabs = [
@@ -122,6 +36,76 @@ export default function ProfilePage() {
         "Coin Created",
         "Coin Held",
     ];
+
+    // Helper function to calculate coin age
+    const calculateAge = (createdAt: any) => {
+        if (!createdAt) return "-";
+        const created = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+        const now = new Date();
+        const diffMs = now.getTime() - created.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 1) return "Today";
+        if (diffDays === 1) return "1d";
+        if (diffDays < 30) return `${diffDays}d`;
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo`;
+        return `${Math.floor(diffDays / 365)}y`;
+    };
+
+    // Fetch wallet balances (ADA + Native Tokens)
+    const fetchWalletBalances = async () => {
+        if (!walletName || !(window as any).cardano) {
+            return;
+        }
+
+        try {
+            const api = await (window as any).cardano[walletName].enable();
+            const lucid = await initLucid(api);
+            const utxos = await lucid.wallet.getUtxos();
+            
+            // Calculate ADA balance
+            const lovelace = utxos.reduce((acc, u) => acc + u.assets.lovelace, 0n);
+            setAdaBalance((Number(lovelace) / 1_000_000).toFixed(2));
+
+            // Extract native tokens
+            const tokensMap = new Map<string, bigint>();
+            utxos.forEach(utxo => {
+                Object.entries(utxo.assets).forEach(([assetId, amount]) => {
+                    if (assetId !== "lovelace") {
+                        const current = tokensMap.get(assetId) || 0n;
+                        tokensMap.set(assetId, current + (amount as bigint));
+                    }
+                });
+            });
+
+            // Convert to array format
+            const tokens = Array.from(tokensMap.entries()).map(([assetId, amount]) => {
+                // Parse policy ID and asset name from assetId
+                const policyId = assetId.slice(0, 56);
+                const assetName = assetId.slice(56);
+                
+                return {
+                    id: assetId,
+                    policyId,
+                    assetName,
+                    amount: amount.toString(),
+                    balance: `${Number(amount).toLocaleString()}`,
+                    // These will be populated if we can match with Firebase data
+                    name: assetName || "Unknown Token",
+                    symbol: assetName || "???",
+                    image: "https://cryptologos.cc/logos/cardano-ada-logo.png",
+                    value: "-",
+                    change: "0%",
+                    allocation: "-"
+                };
+            });
+
+            setHeldTokens(tokens);
+        } catch (err) {
+            console.error("Error fetching wallet balances:", err);
+            toast.error("Failed to fetch wallet balances");
+        }
+    };
 
     const fetchData = async () => {
         if (!walletAddress) {
@@ -140,8 +124,21 @@ export default function ProfilePage() {
             // Fetch Created Coins
             const q = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
             const querySnapshot = await getDocs(q);
-            const coins = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const coins = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    age: calculateAge(data.createdAt),
+                    marketCap: data.marketCap || "-",
+                    volume: data.volume || "-",
+                    change: data.change || "0%"
+                };
+            });
             setCreatedCoins(coins);
+
+            // Fetch wallet balances
+            await fetchWalletBalances();
 
         } catch (error) {
             console.error("Error fetching profile data:", error);
@@ -165,14 +162,24 @@ export default function ProfilePage() {
     };
 
     // Helper to determine which data to show
-    // Prioritize fetched data if available, otherwise fallback to dummy data for UI demo
     const getDataForTab = () => {
         switch (activeTab) {
             case "Coin Created":
-                return createdCoins.length > 0 ? createdCoins : COINS_CREATED;
+                return createdCoins;
             case "Coin Held":
+                return heldTokens;
             case "Balances":
-                return COINS_HELD;
+                // Return ADA balance as an array item
+                return [{
+                    id: "ada",
+                    name: "Cardano",
+                    symbol: "ADA",
+                    image: "https://cryptologos.cc/logos/cardano-ada-logo.png",
+                    balance: `${adaBalance} ADA`,
+                    value: `$${(parseFloat(adaBalance) * 0.4).toFixed(2)}`,
+                    change: "-",
+                    allocation: "100%"
+                }];
             default:
                 return [];
         }
@@ -280,7 +287,7 @@ export default function ProfilePage() {
                                 <span className="text-[var(--muted)]">Following</span>
                             </div>
                             <div className="flex flex-col items-center">
-                                <span className="font-bold text-lg">{createdCoins.length > 0 ? createdCoins.length : COINS_CREATED.length}</span>
+                                <span className="font-bold text-lg">{createdCoins.length}</span>
                                 <span className="text-[var(--muted)]">Created coins</span>
                             </div>
                         </div>
