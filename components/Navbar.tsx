@@ -93,10 +93,12 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3 flex-row-reverse flex">
           <div className="hidden md:flex items-center gap-3">
+            <Link href="/createcoin">
             <button className="px-4 py-1.5 text-sm font-medium text-white bg-[var(--primary)] hover:bg-violet-700 rounded-lg transition-colors flex items-center ">
               <PlusCircle className="w-4 h-4 mr-2" />
               Create Coin
             </button>
+            </Link>
             {isConnected ? (
               <button
                 onClick={() => setIsWalletModalOpen(true)}

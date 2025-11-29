@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "agora-rtc-react": "^2.5.0",
+    "agora-rtc-sdk-ng": "^4.24.1",
     "axios": "^1.13.2",
     "firebase": "^12.6.0",
     "lucid-cardano": "^0.10.11",
