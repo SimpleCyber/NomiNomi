@@ -12,10 +12,11 @@ import {
     useLocalCameraTrack,
     usePublish,
     useRemoteUsers,
+    useRTCClient,
 } from "agora-rtc-react";
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Send, Maximize2, Minimize2, X } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, deleteDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, deleteDoc, getDocs, setDoc, doc } from "firebase/firestore";
 import { useWallet } from "@/context/WalletContext";
 
 interface CoinData {
@@ -31,85 +32,68 @@ interface LiveStreamProps {
     channelName: string;
     role: "host" | "audience";
     coinData: CoinData | null;
-    isMinimized: boolean;
-    onEndCall: () => void;
-    onToggleMinimize: () => void;
+    isMinimized?: boolean;
+    onEndCall?: () => void;
+    onToggleMinimize?: () => void;
+    fullScreen?: boolean;
 }
 
-const LiveStreamContent = ({ appId, token, channelName, role, coinData, isMinimized, onEndCall, onToggleMinimize }: LiveStreamProps) => {
+const LiveStreamContent = ({ appId, token, channelName, role, coinData, isMinimized = false, onEndCall, onToggleMinimize, fullScreen = false }: LiveStreamProps) => {
     const { walletAddress } = useWallet();
     const [micOn, setMicOn] = useState(true);
     const [cameraOn, setCameraOn] = useState(true);
-    const [messages, setMessages] = useState<any[]>([]);
-    const [newMessage, setNewMessage] = useState("");
 
     const { localMicrophoneTrack } = useLocalMicrophoneTrack(micOn && role === "host");
     const { localCameraTrack } = useLocalCameraTrack(cameraOn && role === "host");
     const remoteUsers = useRemoteUsers();
     const isConnected = useIsConnected();
+    const client = useRTCClient();
+
+    useEffect(() => {
+        if (client) {
+            client.setClientRole(role);
+        }
+    }, [client, role]);
 
     useJoin({
         appid: appId,
         channel: channelName,
         token: token,
-        uid: null, // Let Agora assign a unique ID to prevent conflicts
+        uid: null,
     });
 
     usePublish([localMicrophoneTrack, localCameraTrack]);
-
-    const [isStreamRegistered, setIsStreamRegistered] = useState(false);
 
     // Active Stream Registration (Host Only)
     useEffect(() => {
         if (role !== "host" || !channelName || !coinData) return;
 
         const registerStream = async () => {
-            if (!walletAddress) {
-                console.log("Waiting for wallet address to register stream...");
-                return;
-            }
+            if (!walletAddress) return;
 
             try {
-                // Check if already registered
-                const q = query(collection(db, "active_streams"), where("channel", "==", channelName));
-                const snapshot = await getDocs(q);
-
-                if (snapshot.empty) {
-                    console.log("Registering stream for channel:", channelName);
-                    await addDoc(collection(db, "active_streams"), {
-                        channel: channelName,
-                        hostAddress: walletAddress,
-                        coinId: coinData.id,
-                        coinName: coinData.name,
-                        coinSymbol: coinData.symbol,
-                        coinImage: coinData.image,
-                        startedAt: serverTimestamp(),
-                        viewerCount: 0, // Placeholder
-                    });
-                    console.log("Stream registered successfully!");
-                    setIsStreamRegistered(true);
-                } else {
-                    console.log("Stream already registered.");
-                    setIsStreamRegistered(true);
-                }
+                // Use setDoc with channelName as ID to prevent duplicates
+                await setDoc(doc(db, "active_streams", channelName), {
+                    channel: channelName,
+                    hostAddress: walletAddress,
+                    coinId: coinData.id,
+                    coinName: coinData.name,
+                    coinSymbol: coinData.symbol,
+                    coinImage: coinData.image,
+                    startedAt: serverTimestamp(),
+                    viewerCount: 0,
+                });
             } catch (error) {
                 console.error("Error registering stream:", error);
-                setIsStreamRegistered(false);
             }
         };
 
         registerStream();
 
-        // Cleanup on unmount
         return () => {
             const cleanupStream = async () => {
                 try {
-                    const q = query(collection(db, "active_streams"), where("channel", "==", channelName));
-                    const snapshot = await getDocs(q);
-                    snapshot.forEach(async (doc) => {
-                        await deleteDoc(doc.ref);
-                    });
-                    console.log("Stream cleaned up.");
+                    await deleteDoc(doc(db, "active_streams", channelName));
                 } catch (error) {
                     console.error("Error cleaning up stream:", error);
                 }
@@ -118,46 +102,10 @@ const LiveStreamContent = ({ appId, token, channelName, role, coinData, isMinimi
         };
     }, [channelName, role, coinData, walletAddress]);
 
-    // Chat Logic
-    useEffect(() => {
-        if (!channelName) return;
-
-        const q = query(
-            collection(db, "stream_chats"),
-            where("channel", "==", channelName),
-            orderBy("timestamp", "asc")
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setMessages(msgs);
-        });
-
-        return () => unsubscribe();
-    }, [channelName]);
-
-    const sendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !walletAddress) return;
-
-        try {
-            await addDoc(collection(db, "stream_chats"), {
-                channel: channelName,
-                text: newMessage,
-                sender: walletAddress,
-                timestamp: serverTimestamp(),
-            });
-            setNewMessage("");
-        } catch (error) {
-            console.error("Error sending message:", error);
-        }
-    };
-
     // Minimized View
     if (isMinimized) {
         return (
             <div className="relative w-full h-full bg-black group">
-                {/* Show Host Video or Local Video */}
                 {role === "host" ? (
                     <LocalUser
                         audioTrack={localMicrophoneTrack}
@@ -175,14 +123,17 @@ const LiveStreamContent = ({ appId, token, channelName, role, coinData, isMinimi
                     )
                 )}
 
-                {/* Overlay Controls */}
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button onClick={onToggleMinimize} className="p-1 bg-black/50 rounded text-white hover:bg-black/70">
-                        <Maximize2 size={14} />
-                    </button>
-                    <button onClick={onEndCall} className="p-1 bg-red-600/80 rounded text-white hover:bg-red-700">
-                        <X size={14} />
-                    </button>
+                    {onToggleMinimize && (
+                        <button onClick={onToggleMinimize} className="p-1 bg-black/50 rounded text-white hover:bg-black/70">
+                            <Maximize2 size={14} />
+                        </button>
+                    )}
+                    {onEndCall && (
+                        <button onClick={onEndCall} className="p-1 bg-red-600/80 rounded text-white hover:bg-red-700">
+                            <X size={14} />
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -190,30 +141,36 @@ const LiveStreamContent = ({ appId, token, channelName, role, coinData, isMinimi
 
     // Full View
     return (
-        <div className="flex flex-col h-full bg-black rounded-xl overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-[#141519] border-b border-gray-800">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden">
-                        <img src={coinData?.image} alt={coinData?.symbol} className="w-full h-full object-cover" />
+        <div className={`flex flex-col h-full bg-black ${fullScreen ? '' : 'rounded-xl overflow-hidden'}`}>
+            {/* Header - Only show if NOT fullScreen or if we want a header in fullScreen too */}
+            {!fullScreen && (
+                <div className="flex items-center justify-between p-4 bg-[#141519] border-b border-gray-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden">
+                            <img src={coinData?.image} alt={coinData?.symbol} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-white text-sm">{coinData?.name} Live</h3>
+                            <span className="text-xs text-green-400 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                Live
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-white text-sm">{coinData?.name} Live</h3>
-                        <span className="text-xs text-green-400 flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            Live
-                        </span>
+                    <div className="flex gap-2">
+                        {onToggleMinimize && (
+                            <button onClick={onToggleMinimize} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
+                                <Minimize2 size={20} />
+                            </button>
+                        )}
+                        {onEndCall && (
+                            <button onClick={onEndCall} className="p-2 hover:bg-red-900/20 rounded-lg text-red-500 hover:text-red-400 transition-colors">
+                                <X size={20} />
+                            </button>
+                        )}
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button onClick={onToggleMinimize} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors">
-                        <Minimize2 size={20} />
-                    </button>
-                    <button onClick={onEndCall} className="p-2 hover:bg-red-900/20 rounded-lg text-red-500 hover:text-red-400 transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Video Area */}
             <div className="flex-1 relative bg-gray-900 min-h-[300px]">
@@ -269,36 +226,6 @@ const LiveStreamContent = ({ appId, token, channelName, role, coinData, isMinimi
                         </button>
                     </div>
                 )}
-            </div>
-
-            {/* Chat Area */}
-            <div className="h-[200px] bg-[#141519] border-t border-gray-800 flex flex-col">
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className="text-sm">
-                            <span className="font-bold text-green-400 text-xs">
-                                {msg.sender.slice(0, 4)}...{msg.sender.slice(-4)}:
-                            </span>
-                            <span className="text-gray-300 ml-2">{msg.text}</span>
-                        </div>
-                    ))}
-                </div>
-                <form onSubmit={sendMessage} className="p-3 border-t border-gray-800 flex gap-2">
-                    <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Say something..."
-                        className="flex-1 bg-[#1a1b1f] border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!newMessage.trim()}
-                        className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Send size={18} />
-                    </button>
-                </form>
             </div>
         </div>
     );

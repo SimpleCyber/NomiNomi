@@ -19,9 +19,11 @@ interface Stream {
   startedAt: any;
 }
 
+import { useRouter } from "next/navigation";
+
 export default function LiveStreamPage() {
   const [streams, setStreams] = useState<Stream[]>([]);
-  const { joinStream } = useLiveStream();
+  const router = useRouter();
 
   useEffect(() => {
     // Listen for active streams
@@ -87,12 +89,7 @@ export default function LiveStreamPage() {
               {streams.map((stream) => (
                 <div
                   key={stream.id}
-                  onClick={() => joinStream(stream.channel, {
-                    id: stream.coinId,
-                    name: stream.coinName,
-                    symbol: stream.coinSymbol,
-                    image: stream.coinImage
-                  })}
+                  onClick={() => router.push(`/livestream/${stream.channel}`)}
                   className="group relative bg-[var(--card-bg)] rounded-xl overflow-hidden border border-[var(--border-color)] hover:border-violet-500/50 transition-all cursor-pointer hover:shadow-2xl hover:shadow-violet-500/10"
                 >
                   {/* Thumbnail Area */}

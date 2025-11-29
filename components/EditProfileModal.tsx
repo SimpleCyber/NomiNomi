@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
@@ -23,22 +23,54 @@ export default function EditProfileModal({
 }: EditProfileModalProps) {
   const [username, setUsername] = useState(currentUsername);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(""); // Clear error on type
+    // Force lowercase and remove spaces
+    const value = e.target.value.toLowerCase().replace(/\s/g, "");
+    // Only allow letters, numbers, underscores, and periods
+    if (/^[a-z0-9_.]*$/.test(value)) {
+      setUsername(value);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     if (!username.trim()) {
-      toast.error("Username cannot be empty");
+      setError("Username cannot be empty");
+      return;
+    }
+
+    if (username.length < 3) {
+      setError("Username must be at least 3 characters long");
       return;
     }
 
     setIsLoading(true);
     try {
+      // 1. Check for uniqueness
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username));
+      const querySnapshot = await getDocs(q);
+
+      // If a document is found AND it's not the current user's document
+      const isTaken = querySnapshot.docs.some(doc => doc.id !== walletAddress);
+
+      if (isTaken) {
+        setError("Username is already taken. Please choose another.");
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Update profile
       const userRef = doc(db, "users", walletAddress);
       await updateDoc(userRef, {
-        username: username.trim(),
+        username: username,
       });
 
       toast.success("Profile updated successfully!");
@@ -77,11 +109,19 @@ export default function EditProfileModal({
               id="username"
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 outline-none focus:border-green-500 transition-colors"
-              placeholder="Enter your username"
+              onChange={handleUsernameChange}
+              className={`w-full bg-[var(--input-bg)] border rounded-lg px-3 py-2 outline-none transition-colors ${error ? "border-red-500 focus:border-red-500" : "border-[var(--border-color)] focus:border-green-500"
+                }`}
+              placeholder="username"
               maxLength={30}
             />
+            {error ? (
+              <p className="text-xs text-red-500 font-medium">{error}</p>
+            ) : (
+              <p className="text-xs text-[var(--muted)]">
+                Only lowercase letters, numbers, underscores, and periods. No spaces.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
