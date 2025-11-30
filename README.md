@@ -28,18 +28,22 @@
 ```bash
 # Clone & Enter
 git clone https://github.com/SimpleCyber/NomiNomi.git
-cd frontend/NomiNomi
+cd NomiNomi
 
 # Install & Run
-npm install --legacy-peer-deps
+npm install 
 npm run dev
+
+cd meme_launchpad_aiken
+aiken check
+aiken build
 ```
 
 Open [localhost:3000](http://localhost:3000) and start building! 🎉
 
 ## 🛠️ Tech Stack
 
-`Next.js` • `React` • `Tailwind CSS` • `Vercel`
+`Next.js` • `Tailwind CSS` • `Cardano` • `Typescript` • `Aiken` • `Firebase` • `Vercel`
 
 ## 🗺️ Roadmap
 
