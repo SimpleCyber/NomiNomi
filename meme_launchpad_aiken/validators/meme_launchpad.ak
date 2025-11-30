@@ -75,9 +75,13 @@ validator market {
   }
 }
 
-validator minting(market_validator_hash: ByteArray) {
+validator minting {
   mint(redeemer: Action, policy_id: PolicyId, tx: Transaction) {
     let Transaction { outputs, .. } = tx
+    // Hardcoded market validator hash from previous build
+    // Note: If market validator changes, this must be updated!
+    let market_validator_hash = #"f490fc2e13b1d1c6daafab77b9e8d0a7c06a74e5f106adc0696cade6"
+
     when redeemer is {
       Create -> {
         // 1. Check minted amount is max_supply

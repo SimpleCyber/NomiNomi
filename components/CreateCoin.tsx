@@ -20,6 +20,8 @@ import {
   where,
   getDocs,
   Timestamp,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useWallet } from "../context/WalletContext";
@@ -125,11 +127,15 @@ export default function CreateCoin() {
         ...metadata,
         metadataHash,
         maxSupply: 1000000,
-        fundingGoalAda: 5,
+        fundingGoalAda: 100,
         status: "FUNDING", // Initial status
         isPaused: false,
         createdAt: serverTimestamp(),
         creatorAddress: walletAddress,
+        currentSupply: 0,
+        raisedAda: 0,
+        marketCap: 0,
+        volume: 0,
       });
 
       console.log("Token created with ID: ", docRef.id);
@@ -148,7 +154,7 @@ export default function CreateCoin() {
         console.log("Mint Tx Hash:", txHash);
 
         // Update Firestore with Tx Hash
-        // await updateDoc(docRef, { txHash, status: "MINTED" });
+        await updateDoc(docRef, { txHash, status: "MINTED" });
       } catch (txError) {
         console.error("Transaction failed:", txError);
         // await deleteDoc(docRef); // Optional rollback

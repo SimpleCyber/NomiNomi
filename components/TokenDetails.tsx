@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../lib/firebase";
-import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit, updateDoc, increment, setDoc } from "firebase/firestore";
 import { useWallet } from "../context/WalletContext";
 import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw } from "lucide-react";
 import Image from "next/image";
-import { buyToken, launchLP } from "../lib/transactions";
+import { buyToken, sellToken, launchLP, calculateAmountOut, calculateRefund } from "../lib/transactions";
+import PriceChart from "./PriceChart";
 import { toast } from "sonner";
 
 interface Comment {
@@ -30,14 +31,32 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [token, setToken] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [buyAmount, setBuyAmount] = useState("");
+  const [sellAmount, setSellAmount] = useState("");
   const [isBuying, setIsBuying] = useState(false);
+  const [isSelling, setIsSelling] = useState(false);
+  const [tradeMode, setTradeMode] = useState<"buy" | "sell">("buy");
   const [isLaunching, setIsLaunching] = useState(false);
-  const [activeTab, setActiveTab] = useState<"thread" | "trades">("thread");
+  const [activeTab, setActiveTab] = useState<"thread" | "trades">("trades");
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [userBalance, setUserBalance] = useState<number>(0);
+  const [estTokens, setEstTokens] = useState<string>("0");
   const { isConnected, walletAddress } = useWallet();
+
+  // Fetch User Balance
+  useEffect(() => {
+    if (!isConnected || !walletAddress || !tokenId) return;
+    const unsub = onSnapshot(doc(db, "memecoins", tokenId, "holders", walletAddress), (doc) => {
+      if (doc.exists()) {
+        setUserBalance(doc.data().balance || 0);
+      } else {
+        setUserBalance(0);
+      }
+    });
+    return () => unsub();
+  }, [tokenId, walletAddress, isConnected]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "memecoins", tokenId), (doc) => {
@@ -112,7 +131,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   };
 
   const handleBuy = async () => {
-    if (!isConnected) {
+    if (!isConnected || !walletAddress) {
       toast.error("Please connect wallet");
       return;
     }
@@ -123,26 +142,138 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       const walletName = cardano.nami ? "nami" : "eternl";
       const walletApi = await cardano[walletName].enable();
 
-      const txHash = await buyToken(walletApi, token, parseFloat(buyAmount));
+      // Calculate amounts
+      const currentSupply = BigInt(token.currentSupply || 0);
+      const amountAdaInput = parseFloat(buyAmount);
+      const amountAdaBig = BigInt(Math.floor(amountAdaInput * 1_000_000));
+      
+      const amountOut = calculateAmountOut(currentSupply, amountAdaBig);
+      const amountOutNumber = Number(amountOut);
+
+      // Execute Transaction (Fee only)
+      // Fix: Pass amountOut (token amount) instead of amountAdaBig (ADA amount)
+      const txHash = await buyToken(walletApi, token.token_policy_id || "", amountOut, currentSupply);
       console.log("Buy Tx:", txHash);
 
-      // Record Trade in Firestore
+      // Update Token State in Firestore
+      const newRaisedAda = (token.raisedAda || 0) + amountAdaInput;
+      const newCurrentSupply = (token.currentSupply || 0) + amountOutNumber;
+      const bondingCurveProgress = Math.min((newRaisedAda / 100) * 100, 100);
+
+      await updateDoc(doc(db, "memecoins", tokenId), {
+        raisedAda: increment(amountAdaInput),
+        currentSupply: increment(amountOutNumber),
+        volume: increment(amountAdaInput),
+        marketCap: increment(amountAdaInput), // Simplified MC
+        bondingCurve: bondingCurveProgress
+      });
+
+      // Update Holder Balance
+      const holderRef = doc(db, "memecoins", tokenId, "holders", walletAddress);
+      const holderSnap = await getDoc(holderRef);
+      if (holderSnap.exists()) {
+        await updateDoc(holderRef, { balance: increment(amountOutNumber) });
+      } else {
+        await setDoc(holderRef, { balance: amountOutNumber, address: walletAddress });
+      }
+
+      // Update User's Held Coins (Global)
+      const userHeldCoinRef = doc(db, "users", walletAddress, "heldCoins", tokenId);
+      const userHeldCoinSnap = await getDoc(userHeldCoinRef);
+      if (userHeldCoinSnap.exists()) {
+         await updateDoc(userHeldCoinRef, { balance: increment(amountOutNumber) });
+      } else {
+         await setDoc(userHeldCoinRef, { 
+             balance: amountOutNumber, 
+             symbol: token.symbol, 
+             name: token.name, 
+             image: token.image || "",
+             tokenId: tokenId
+         });
+      }
+
+      // Record Trade
       await addDoc(collection(db, "memecoins", tokenId, "trades"), {
         type: "buy",
-        amountAda: parseFloat(buyAmount),
-        amountToken: 0, // In a real app, calculate this based on price
+        amountAda: amountAdaInput,
+        amountToken: amountOutNumber,
         account: walletAddress,
         timestamp: serverTimestamp(),
         txnHash: txHash,
       });
 
-      toast.success("Buy transaction submitted!");
+      toast.success(`Bought ${amountOutNumber} tokens!`);
       setBuyAmount("");
     } catch (error) {
       console.error("Buy failed:", error);
       toast.error("Buy failed. See console.");
     } finally {
       setIsBuying(false);
+    }
+  };
+
+  const handleSell = async () => {
+    if (!isConnected || !walletAddress) {
+      toast.error("Please connect wallet");
+      return;
+    }
+
+    setIsSelling(true);
+    try {
+      const cardano = (window as any).cardano;
+      const walletName = cardano.nami ? "nami" : "eternl";
+      const walletApi = await cardano[walletName].enable();
+
+      // Calculate amounts
+      const currentSupply = BigInt(token.currentSupply || 0);
+      const amountToSell = parseFloat(sellAmount);
+      const amountToSellBig = BigInt(Math.floor(amountToSell));
+      
+      const refundLovelace = calculateRefund(currentSupply, amountToSellBig);
+      const refundAda = Number(refundLovelace) / 1_000_000;
+
+      // Execute Transaction (Dummy)
+      const txHash = await sellToken(walletApi, token.token_policy_id || "", amountToSellBig);
+      console.log("Sell Tx:", txHash);
+
+      // Update Token State
+      const newRaisedAda = (token.raisedAda || 0) - refundAda;
+      const bondingCurveProgress = Math.min((newRaisedAda / 100) * 100, 100);
+
+      await updateDoc(doc(db, "memecoins", tokenId), {
+        raisedAda: increment(-refundAda),
+        currentSupply: increment(-amountToSell),
+        volume: increment(refundAda), // Volume always increases
+        marketCap: increment(-refundAda),
+        bondingCurve: bondingCurveProgress
+      });
+
+      // Update Holder Balance
+      await updateDoc(doc(db, "memecoins", tokenId, "holders", walletAddress), {
+        balance: increment(-amountToSell)
+      });
+
+      // Update User's Held Coins (Global)
+      const userHeldCoinRef = doc(db, "users", walletAddress, "heldCoins", tokenId);
+      await updateDoc(userHeldCoinRef, { balance: increment(-amountToSell) });
+
+      // Record Trade
+      await addDoc(collection(db, "memecoins", tokenId, "trades"), {
+        type: "sell",
+        amountAda: refundAda,
+        amountToken: amountToSell,
+        account: walletAddress,
+        timestamp: serverTimestamp(),
+        txnHash: txHash,
+      });
+
+      toast.success(`Sold ${amountToSell} tokens for ${refundAda.toFixed(2)} ADA!`);
+      setSellAmount("");
+    } catch (error) {
+      console.error("Sell failed:", error);
+      toast.error("Sell failed. See console.");
+    } finally {
+      setIsSelling(false);
     }
   };
 
@@ -184,7 +315,19 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     );
   if (!token) return <div className="p-8 text-center text-[var(--muted)]">Token not found</div>;
 
-  const progress = Math.min(((token.raisedAda || 0) / 5) * 100, 100);
+  if (!token) return <div className="p-8 text-center text-[var(--muted)]">Token not found</div>;
+
+  const progress = Math.min(((token.raisedAda || 0) / 100) * 100, 100);
+  const holderPercentage = userBalance && token.currentSupply ? ((userBalance / token.currentSupply) * 100).toFixed(2) : "0.00";
+
+  // Prepare Chart Data
+  const chartData = trades
+    .filter(t => t.amountAda > 0 && t.amountToken > 0) // Filter valid trades
+    .sort((a, b) => a.timestamp?.seconds - b.timestamp?.seconds)
+    .map(t => ({
+      timestamp: t.timestamp?.seconds * 1000 || Date.now(),
+      price: t.amountAda / t.amountToken
+    }));
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 lg:p-6">
@@ -263,11 +406,8 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                 <span className="cursor-pointer hover:text-[var(--foreground)]">4h</span>
               </div>
             </div>
-            <div className="flex-1 flex items-center justify-center text-[var(--muted)] bg-black/20">
-              <div className="text-center">
-                <p className="mb-2">Chart Placeholder</p>
-                <p className="text-xs opacity-50">TradingView integration coming soon</p>
-              </div>
+            <div className="flex-1 flex items-center justify-center text-[var(--muted)] bg-black/20 relative">
+               <PriceChart data={chartData} />
             </div>
           </div>
 
@@ -401,49 +541,102 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
           {/* Trade Panel */}
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4">
             <div className="flex bg-[var(--input-bg)] rounded-lg p-1 mb-4">
-              <button className="flex-1 py-2 rounded-md bg-green-500 text-black font-bold text-sm shadow-sm transition-all">Buy</button>
-              <button className="flex-1 py-2 rounded-md text-[var(--muted)] font-medium text-sm hover:text-[var(--foreground)] transition-colors">Sell</button>
+              <button
+                onClick={() => setTradeMode("buy")}
+                className={`flex-1 py-2 rounded-md font-bold text-sm shadow-sm transition-all ${tradeMode === "buy" ? "bg-green-500 text-black" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                Buy
+              </button>
+              <button
+                onClick={() => setTradeMode("sell")}
+                className={`flex-1 py-2 rounded-md font-bold text-sm shadow-sm transition-all ${tradeMode === "sell" ? "bg-red-500 text-white" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+              >
+                Sell
+              </button>
             </div>
 
             <div className="space-y-4">
               <div className="bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl p-3">
                 <div className="flex justify-between text-xs text-[var(--muted)] mb-1">
-                  <span className="font-medium">Amount (ADA)</span>
-                  <span>Max: 0</span>
+                  <span className="font-medium">Amount ({tradeMode === "buy" ? "ADA" : token.symbol})</span>
+                  <div className="flex gap-2">
+                    <span>Max: {tradeMode === "buy" ? "∞" : userBalance}</span>
+                    {tradeMode === "sell" && <span className="text-[var(--muted)]">({holderPercentage}%)</span>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    value={buyAmount}
-                    onChange={(e) => setBuyAmount(e.target.value)}
+                    value={tradeMode === "buy" ? buyAmount : sellAmount}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (tradeMode === "buy") {
+                            setBuyAmount(val);
+                            // Estimate tokens
+                            if (val && !isNaN(parseFloat(val)) && token) {
+                                const currentSupply = BigInt(token.currentSupply || 0);
+                                const amountAdaBig = BigInt(Math.floor(parseFloat(val) * 1_000_000));
+                                const est = calculateAmountOut(currentSupply, amountAdaBig);
+                                setEstTokens(est.toString());
+                            } else {
+                                setEstTokens("0");
+                            }
+                        } else {
+                            setSellAmount(val);
+                        }
+                    }}
                     placeholder="0.0"
                     className="w-full bg-transparent text-lg font-bold outline-none text-[var(--foreground)] placeholder:text-[var(--muted)]/50"
                   />
                   <div className="flex items-center gap-1 bg-black/20 px-2 py-1 rounded text-xs font-medium">
-                    <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[8px]">₳</span>
-                    ADA
+                    {tradeMode === "buy" ? (
+                      <>
+                        <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[8px]">₳</span>
+                        ADA
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center text-[8px]">{token.symbol?.[0]}</span>
+                        {token.symbol}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
+              
+              {tradeMode === "buy" && buyAmount && (
+                  <div className="text-xs text-[var(--muted)] text-right">
+                      Est. received: <span className="font-bold text-[var(--foreground)]">{estTokens}</span> {token.symbol}
+                  </div>
+              )}
 
-              <div className="flex gap-2">
-                {["10", "50", "100"].map(amount => (
-                  <button
-                    key={amount}
-                    onClick={() => setBuyAmount(amount)}
-                    className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg py-1.5 text-xs font-medium hover:bg-[var(--border-color)] transition-colors"
-                  >
-                    {amount} ADA
-                  </button>
-                ))}
-              </div>
+              {tradeMode === "buy" && (
+                <div className="flex gap-2">
+                  {["10", "50", "100"].map(amount => (
+                    <button
+                      key={amount}
+                      onClick={() => setBuyAmount(amount)}
+                      className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg py-1.5 text-xs font-medium hover:bg-[var(--border-color)] transition-colors"
+                    >
+                      {amount} ADA
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <button
-                onClick={handleBuy}
-                disabled={isBuying || !buyAmount}
-                className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_20px_rgba(34,197,94,0.5)]"
+                onClick={tradeMode === "buy" ? handleBuy : handleSell}
+                disabled={tradeMode === "buy" ? (isBuying || !buyAmount) : (isSelling || !sellAmount)}
+                className={`w-full font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
+                  tradeMode === "buy"
+                    ? "bg-green-500 hover:bg-green-400 text-black shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_20px_rgba(34,197,94,0.5)]"
+                    : "bg-red-500 hover:bg-red-400 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+                }`}
               >
-                {isBuying ? "Processing..." : "Quick Buy"}
+                {tradeMode === "buy"
+                  ? (isBuying ? "Processing..." : "Quick Buy")
+                  : (isSelling ? "Processing..." : "Quick Sell")
+                }
               </button>
             </div>
           </div>
@@ -459,15 +652,19 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
             <div className="flex justify-between text-xs text-[var(--muted)]">
               <span>{progress.toFixed(2)}%</span>
-              <span>Target: 5 ADA</span>
+              <span>Target: 100 ADA</span>
             </div>
             <p className="text-xs text-[var(--muted)] mt-3 leading-relaxed">
-              When the market cap reaches 5 ADA, all liquidity is deposited into Minswap and burned.
+              When the market cap reaches 100 ADA, all liquidity is deposited into Minswap and burned.
             </p>
           </div>
 
           {/* Token Info */}
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-[var(--muted)]">Remaining Tokens</span>
+              <span className="font-bold text-sm">{(1000000 - (token.currentSupply || 0)).toLocaleString()}</span>
+            </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">Market Cap</span>
               <span className="font-bold text-sm">{token.marketCap || "$0"}</span>
@@ -483,7 +680,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
           </div>
 
           {/* Creator Actions */}
-          {token.raisedAda >= 5 && token.creatorAddress === walletAddress && (
+          {token.raisedAda >= 100 && token.creatorAddress === walletAddress && (
             <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4">
               <h3 className="font-bold text-sm mb-3">Creator Actions</h3>
               <button

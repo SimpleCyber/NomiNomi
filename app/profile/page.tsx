@@ -19,6 +19,7 @@ export default function ProfilePage() {
     const [userData, setUserData] = useState<any>(null);
     const [balance, setBalance] = useState<string>("0.00");
     const [createdCoins, setCreatedCoins] = useState<any[]>([]);
+    const [heldCoins, setHeldCoins] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedCoin, setSelectedCoin] = useState<any>(null);
@@ -48,11 +49,16 @@ export default function ProfilePage() {
             }
 
             // Fetch Created Coins
-            // Assuming 'memecoins' collection has a 'creatorAddress' field
             const q = query(collection(db, "memecoins"), where("creatorAddress", "==", walletAddress));
             const querySnapshot = await getDocs(q);
             const coins = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setCreatedCoins(coins);
+
+            // Fetch Held Coins
+            const heldCoinsRef = collection(db, "users", walletAddress, "heldCoins");
+            const heldCoinsSnap = await getDocs(heldCoinsRef);
+            const held = heldCoinsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((c: any) => c.balance > 0);
+            setHeldCoins(held);
 
         } catch (error) {
             console.error("Error fetching profile data:", error);
@@ -290,8 +296,8 @@ export default function ProfilePage() {
 
                             {activeTab === "Coin Held" && (
                                 <CoinDisplay 
-                                    coins={[]} // Placeholder for held coins
-                                    onCoinClick={handleCoinClick} // Assuming we might want to view details for held coins too
+                                    coins={heldCoins} 
+                                    onCoinClick={handleCoinClick}
                                     emptyMessage="No coins held yet."
                                     viewMode={viewMode}
                                 />
