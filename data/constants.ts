@@ -260,7 +260,7 @@ export const HERO_SLIDES: HeroSlide[] = [
   },
   {
     id: 3,
-    image: "/home-banner-stacked-yield-SOL-new.webp",
+    image: "/home-banner-stacked-yield-sol-new.webp",
     title: "Stacked Yield",
     description: "Earn yield on your ADA assets.",
     buttonText: "Start Earning",
