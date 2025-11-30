@@ -45,7 +45,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [userBalance, setUserBalance] = useState<number>(0);
   const [estTokens, setEstTokens] = useState<string>("0");
   const [holders, setHolders] = useState<any[]>([]);
-  const { isConnected, walletAddress } = useWallet();
+  const { isConnected, walletAddress, walletName } = useWallet();
   const [chartType, setChartType] = useState<"candle" | "line">("candle");
   const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "1h" | "4h">("15m");
 
@@ -157,7 +157,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     setIsBuying(true);
     try {
       const cardano = (window as any).cardano;
-      const walletName = cardano.nami ? "nami" : "eternl";
+      if (!walletName) throw new Error("Wallet not connected properly");
       const walletApi = await cardano[walletName].enable();
 
       // Calculate amounts
@@ -268,7 +268,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     setIsSelling(true);
     try {
       const cardano = (window as any).cardano;
-      const walletName = cardano.nami ? "nami" : "eternl";
+      if (!walletName) throw new Error("Wallet not connected properly");
       const walletApi = await cardano[walletName].enable();
 
       // Calculate amounts
@@ -349,7 +349,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     setIsLaunching(true);
     try {
       const cardano = (window as any).cardano;
-      const walletName = cardano.nami ? "nami" : "eternl";
+      if (!walletName) throw new Error("Wallet not connected properly");
       const walletApi = await cardano[walletName].enable();
 
       const txHash = await launchLP(walletApi, token);
