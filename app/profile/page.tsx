@@ -57,7 +57,26 @@ export default function ProfilePage() {
             // Fetch Held Coins
             const heldCoinsRef = collection(db, "users", walletAddress, "heldCoins");
             const heldCoinsSnap = await getDocs(heldCoinsRef);
-            const held = heldCoinsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((c: any) => c.balance > 0);
+            
+            const heldCoinsPromises = heldCoinsSnap.docs
+                .map(async (docSnapshot) => {
+                    const heldData = docSnapshot.data();
+                    if (heldData.balance > 0) {
+                        // Fetch the actual coin data from 'memecoins' collection
+                        const coinRef = doc(db, "memecoins", docSnapshot.id);
+                        const coinSnap = await getDoc(coinRef);
+                        if (coinSnap.exists()) {
+                            return { 
+                                id: docSnapshot.id, 
+                                ...coinSnap.data(), 
+                                balance: heldData.balance // Keep the balance from user's heldCoins
+                            };
+                        }
+                    }
+                    return null;
+                });
+
+            const held = (await Promise.all(heldCoinsPromises)).filter((c: any) => c !== null);
             setHeldCoins(held);
 
         } catch (error) {
