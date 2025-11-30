@@ -17,13 +17,12 @@
 ---
 
 ## 🎮 Features
-
-🔥 **Token Creation** – Create tokens with zero coding knowledge 
-📈 **Buy / sell** – Buy and sell the coins easily
+🔥 **Token Creation** – Create tokens with zero coding knowledge
+📈 **Buy / Sell** – Buy and sell the coins easily
 📊 **Livestream** – Have the livestream and grow your meme coin
-👥 **Friend Chat** – Compete and stay motivated  
-🪙 **Swap Coins** – Convert any crypto to Cardano 
-😁 **Meme Place** – Any user can upload and view meme
+👥 **Friend Chat** – Compete and stay motivated
+🪙 **Swap Coins** – Convert any crypto to Cardano
+😁 **Meme Place** – Any user can upload and view memes
 📱 **Responsive** – Track anywhere, anytime
 
 ## ⚡ Quick Start
@@ -46,15 +45,6 @@ Open [localhost:3000](http://localhost:3000) and start building! 🎉
 ## 🛠️ Tech Stack
 
 `Next.js` • `Tailwind CSS` • `Cardano` • `Typescript` • `Aiken` • `Firebase` • `Vercel`
-
-## 🗺️ Roadmap
-
-- [x] ✅ Habit tracking & streaks
-- [x] 🌙 Dark mode
-- [x] 👥 Friend system
-- [ ] 🔔 Push notifications
-- [ ] 🏆 Achievement badges
-- [ ] 📈 Advanced analytics
 
 ## 🤝 Contribute
 
