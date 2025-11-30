@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit, updateDoc, increment, setDoc } from "firebase/firestore";
 import { useWallet } from "../context/WalletContext";
-import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw } from "lucide-react";
+import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw, BarChart2, LineChart } from "lucide-react";
 import Image from "next/image";
 import { buyToken, sellToken, launchLP, calculateAmountOut, calculateRefund } from "../lib/transactions";
 import PriceChart from "./PriceChart";
+import CandleChart from "./CandleChart";
 import { toast } from "sonner";
 
 interface Comment {
@@ -45,18 +46,23 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [estTokens, setEstTokens] = useState<string>("0");
   const [holders, setHolders] = useState<any[]>([]);
   const { isConnected, walletAddress } = useWallet();
+  const [chartType, setChartType] = useState<"candle" | "line">("candle");
+  const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "1h" | "4h">("15m");
 
-  // Fetch User Balance
+  // Fetch User Balances
   useEffect(() => {
     if (!isConnected || !walletAddress || !tokenId) return;
-    const unsub = onSnapshot(doc(db, "memecoins", tokenId, "holders", walletAddress), (doc) => {
+    
+    // Fetch Token Balance
+    const unsubToken = onSnapshot(doc(db, "memecoins", tokenId, "holders", walletAddress), (doc) => {
       if (doc.exists()) {
         setUserBalance(doc.data().balance || 0);
       } else {
         setUserBalance(0);
       }
     });
-    return () => unsub();
+
+    return () => unsubToken();
   }, [tokenId, walletAddress, isConnected]);
 
   useEffect(() => {
@@ -92,7 +98,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   useEffect(() => {
     // Fetch Trades
     const tradesRef = collection(db, "memecoins", tokenId, "trades");
-    const qTrades = query(tradesRef, orderBy("timestamp", "desc"), limit(50));
+    const qTrades = query(tradesRef, orderBy("timestamp", "desc"), limit(500)); // Increased limit for charts
     const unsubscribeTrades = onSnapshot(qTrades, (snapshot) => {
       const tradesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setTrades(tradesData as Trade[]);
@@ -175,13 +181,20 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       const newRaisedAda = (token.raisedAda || 0) + amountAdaInput;
       const newCurrentSupply = (token.currentSupply || 0) + amountOutNumber;
       const bondingCurveProgress = Math.min((newRaisedAda / 100) * 100, 100);
+      
+      // Calculate Price and Market Cap
+      // Price = ADA / Token (for this trade) or derived from curve
+      // Simple approximation: Price = amountAdaInput / amountOutNumber
+      const tradePrice = amountAdaInput / amountOutNumber;
+      const newMarketCap = newCurrentSupply * tradePrice;
 
       await updateDoc(doc(db, "memecoins", tokenId), {
         raisedAda: increment(amountAdaInput),
         currentSupply: increment(amountOutNumber),
         volume: increment(amountAdaInput),
-        marketCap: increment(amountAdaInput), // Simplified MC
-        bondingCurve: bondingCurveProgress
+        marketCap: newMarketCap, // Updated Market Cap logic
+        bondingCurve: bondingCurveProgress,
+        holderCount: increment(0) // Will update below if new holder
       });
 
       // Update Platform Stats
@@ -193,9 +206,16 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       // Update Holder Balance
       const holderRef = doc(db, "memecoins", tokenId, "holders", walletAddress);
       const holderSnap = await getDoc(holderRef);
+      
       if (holderSnap.exists()) {
         await updateDoc(holderRef, { balance: increment(amountOutNumber) });
+      } else {
+        // New Holder
         await setDoc(holderRef, { balance: amountOutNumber, address: walletAddress });
+        // Increment global holder count for the token
+        await updateDoc(doc(db, "memecoins", tokenId), {
+            holderCount: increment(1)
+        });
       }
 
       // Update User's Held Coins (Global)
@@ -265,20 +285,40 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
       // Update Token State
       const newRaisedAda = (token.raisedAda || 0) - refundAda;
+      const newCurrentSupply = (token.currentSupply || 0) - amountToSell;
       const bondingCurveProgress = Math.min((newRaisedAda / 100) * 100, 100);
+      
+      // Calculate Price and Market Cap
+      const tradePrice = refundAda / amountToSell;
+      const newMarketCap = newCurrentSupply * tradePrice;
 
       await updateDoc(doc(db, "memecoins", tokenId), {
         raisedAda: increment(-refundAda),
         currentSupply: increment(-amountToSell),
         volume: increment(refundAda), // Volume always increases
-        marketCap: increment(-refundAda),
+        marketCap: newMarketCap,
         bondingCurve: bondingCurveProgress
       });
 
       // Update Holder Balance
-      await updateDoc(doc(db, "memecoins", tokenId, "holders", walletAddress), {
-        balance: increment(-amountToSell)
-      });
+      const holderRef = doc(db, "memecoins", tokenId, "holders", walletAddress);
+      const holderSnap = await getDoc(holderRef);
+      
+      if (holderSnap.exists()) {
+          const currentBalance = holderSnap.data().balance || 0;
+          const newBalance = currentBalance - amountToSell;
+          
+          if (newBalance <= 0) {
+              // Remove holder if balance is 0 (optional, or just set to 0)
+              // Keeping it at 0 is safer for history, but if we want to track active holders:
+              if (newBalance === 0) {
+                   await updateDoc(doc(db, "memecoins", tokenId), {
+                        holderCount: increment(-1)
+                   });
+              }
+          }
+          await updateDoc(holderRef, { balance: increment(-amountToSell) });
+      }
 
       // Update User's Held Coins (Global)
       const userHeldCoinRef = doc(db, "users", walletAddress, "heldCoins", tokenId);
@@ -323,6 +363,67 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     }
   };
 
+  // Prepare Chart Data - MUST be before conditional returns (React Rules of Hooks)
+  const lineChartData = useMemo(() => {
+     return trades
+        .filter(t => t.amountAda > 0 && t.amountToken > 0)
+        .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0))
+        .map(t => ({
+          timestamp: (t.timestamp?.seconds || 0) * 1000,
+          price: t.amountAda / t.amountToken
+        }));
+  }, [trades]);
+
+  // Prepare Candle Data - MUST be before conditional returns (React Rules of Hooks)
+  const candleChartData = useMemo(() => {
+      if (!trades.length) return [];
+      
+      const sortedTrades = [...trades]
+        .filter(t => t.amountAda > 0 && t.amountToken > 0)
+        .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+
+      if (sortedTrades.length === 0) return [];
+
+      const candles: any[] = [];
+      // 15m candles by default for now, can make dynamic
+      const interval = timeframe === "1m" ? 60 : timeframe === "5m" ? 300 : timeframe === "15m" ? 900 : timeframe === "1h" ? 3600 : 14400; 
+      
+      let currentCandle: any = null;
+
+      sortedTrades.forEach(trade => {
+          const timestamp = trade.timestamp?.seconds || 0;
+          const price = trade.amountAda / trade.amountToken;
+          const candleTime = Math.floor(timestamp / interval) * interval;
+
+          if (!currentCandle) {
+              currentCandle = {
+                  time: candleTime,
+                  open: price,
+                  high: price,
+                  low: price,
+                  close: price
+              };
+          } else if (candleTime === currentCandle.time) {
+              currentCandle.high = Math.max(currentCandle.high, price);
+              currentCandle.low = Math.min(currentCandle.low, price);
+              currentCandle.close = price;
+          } else {
+              candles.push(currentCandle);
+              currentCandle = {
+                  time: candleTime,
+                  open: candles[candles.length - 1].close, // Open at previous close
+                  high: price,
+                  low: price,
+                  close: price
+              };
+          }
+      });
+      if (currentCandle) candles.push(currentCandle);
+      
+      // Fill gaps if needed, but for now just return candles
+      return candles;
+  }, [trades, timeframe]);
+
   const formatTimeAgo = (timestamp: any) => {
     if (!timestamp) return "Just now";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -344,15 +445,6 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
   const progress = Math.min(((token.raisedAda || 0) / 100) * 100, 100);
   const holderPercentage = userBalance && token.currentSupply ? ((userBalance / token.currentSupply) * 100).toFixed(2) : "0.00";
-
-  // Prepare Chart Data
-  const chartData = trades
-    .filter(t => t.amountAda > 0 && t.amountToken > 0) // Filter valid trades
-    .sort((a, b) => a.timestamp?.seconds - b.timestamp?.seconds)
-    .map(t => ({
-      timestamp: t.timestamp?.seconds * 1000 || Date.now(),
-      price: t.amountAda / t.amountToken
-    }));
 
   return (
     <div className="max-w-[1400px] mx-auto p-4 lg:p-6">
@@ -417,22 +509,46 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
         {/* Left Column: Chart & Tabs */}
         <div className="lg:col-span-2 space-y-4">
           {/* Chart Container */}
-          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden h-[450px] flex flex-col">
+          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden h-[500px] flex flex-col">
             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm">{token.symbol}/ADA</span>
                 <span className="text-xs text-green-500">+0.00%</span>
               </div>
-              <div className="flex gap-2 text-xs text-[var(--muted)]">
-                <span className="cursor-pointer hover:text-[var(--foreground)]">1m</span>
-                <span className="cursor-pointer hover:text-[var(--foreground)]">5m</span>
-                <span className="cursor-pointer hover:text-[var(--foreground)] text-[var(--foreground)] font-bold">15m</span>
-                <span className="cursor-pointer hover:text-[var(--foreground)]">1h</span>
-                <span className="cursor-pointer hover:text-[var(--foreground)]">4h</span>
+              <div className="flex items-center gap-4">
+                  <div className="flex bg-[var(--input-bg)] rounded-lg p-0.5">
+                      <button 
+                        onClick={() => setChartType("candle")}
+                        className={`p-1.5 rounded-md transition-colors ${chartType === "candle" ? "bg-[var(--card-bg)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+                      >
+                          <BarChart2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setChartType("line")}
+                        className={`p-1.5 rounded-md transition-colors ${chartType === "line" ? "bg-[var(--card-bg)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}
+                      >
+                          <LineChart size={16} />
+                      </button>
+                  </div>
+                  <div className="flex gap-2 text-xs text-[var(--muted)]">
+                    {["1m", "5m", "15m", "1h", "4h"].map((t) => (
+                        <span 
+                            key={t}
+                            onClick={() => setTimeframe(t as any)}
+                            className={`cursor-pointer hover:text-[var(--foreground)] ${timeframe === t ? "text-[var(--foreground)] font-bold" : ""}`}
+                        >
+                            {t}
+                        </span>
+                    ))}
+                  </div>
               </div>
             </div>
-            <div className="flex-1 flex items-center justify-center text-[var(--muted)] bg-black/20 relative">
-               <PriceChart data={chartData} />
+            <div className="flex-1 flex items-center justify-center text-[var(--muted)] bg-black/20 relative w-full overflow-hidden">
+               {chartType === "candle" ? (
+                   <CandleChart data={candleChartData} />
+               ) : (
+                   <PriceChart data={lineChartData} />
+               )}
             </div>
           </div>
 
@@ -698,7 +814,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">Market Cap</span>
-              <span className="font-bold text-sm">{token.marketCap || "$0"}</span>
+              <span className="font-bold text-sm">{token.marketCap ? `${token.marketCap.toFixed(2)} ADA` : "$0"}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">Virtual Liquidity</span>
@@ -706,7 +822,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">24h Volume</span>
-              <span className="font-bold text-sm">{token.volume || "$0"}</span>
+              <span className="font-bold text-sm">{token.volume ? `${token.volume.toFixed(2)} ADA` : "$0"}</span>
             </div>
           </div>
 

@@ -12,6 +12,7 @@ interface Coin {
   image?: string;
   bondingCurve?: number;
   holders?: number;
+  holderCount?: number;
   createdAt?: any;
 }
 
@@ -29,8 +30,9 @@ const StatCard = ({ title, coin }: { title: string; coin: Coin | null }) => {
     );
   }
 
-  const bondingCurve = coin.bondingCurve || Math.floor(Math.random() * 100);
-  const holders = coin.holders || Math.floor(Math.random() * 500) + 10;
+  const bondingCurve = coin.bondingCurve || 0;
+  // Use holderCount if available, otherwise fallback to 0 (no random data)
+  const holders = coin.holderCount || 0;
 
   return (
     <Link href={`/token/${coin.id}`} className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-4 flex-1 hover:border-blue-500/50 transition-colors cursor-pointer block">
@@ -70,7 +72,7 @@ const StatCard = ({ title, coin }: { title: string; coin: Coin | null }) => {
                   bondingCurve > 80 ? "text-amber-400" : "text-emerald-400"
                 }
               >
-                {bondingCurve}%
+                {bondingCurve.toFixed(2)}%
               </span>
             </div>
             <div className="w-full h-1.5 bg-[var(--input-bg)] rounded-full overflow-hidden">

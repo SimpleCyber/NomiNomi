@@ -41,13 +41,18 @@ export default function MarketTicker() {
             else age = `${Math.floor(diffInSeconds / 86400)}d`;
           }
 
+          // Format Market Cap
+          const marketCap = data.marketCap 
+             ? (typeof data.marketCap === 'number' ? `${data.marketCap.toFixed(2)} ADA` : data.marketCap)
+             : "$0";
+
           return {
             id: doc.id,
             name: data.name || "Unknown",
             symbol: data.symbol || "UNK",
             price: data.price || "$0.00",
-            volume: data.volume || "$0",
-            marketCap: data.marketCap || "$0",
+            volume: data.volume ? `${data.volume.toFixed(2)} ADA` : "$0",
+            marketCap: marketCap,
             change: data.change || "0%",
             change5m: data.change5m || "0%",
             change1h: data.change1h || "0%",
@@ -209,7 +214,7 @@ export default function MarketTicker() {
                           ></div>
                         </div>
                         <span className="text-sm font-medium text-[var(--foreground)]">
-                          {market.ath}
+                           {market.bondingCurve.toFixed(2)}%
                         </span>
                       </div>
                     </td>
@@ -315,7 +320,7 @@ export default function MarketTicker() {
                         ></div>
                       </div>
                       <span className={`text-xs font-medium ${market.isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                        {market.change}
+                        {market.bondingCurve.toFixed(2)}%
                       </span>
                     </div>
                   </div>
