@@ -22,6 +22,8 @@ import {
   Timestamp,
   updateDoc,
   doc,
+  increment,
+  getDoc,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useWallet } from "../context/WalletContext";
@@ -150,11 +152,23 @@ export default function CreateCoin() {
         if (!walletName) throw new Error("Wallet not connected properly");
         const walletApi = await cardano[walletName].enable();
 
-        const txHash = await mintToken(walletApi, metadata, metadataHash);
+        // Fetch Admin Wallet Address
+        const statsRef = doc(db, "platform_stats", "global");
+        const statsSnap = await getDoc(statsRef);
+        const adminAddress = statsSnap.exists() ? statsSnap.data().adminWalletAddress : undefined;
+
+        const txHash = await mintToken(walletApi, metadata, metadataHash, adminAddress);
         console.log("Mint Tx Hash:", txHash);
 
         // Update Firestore with Tx Hash
         await updateDoc(docRef, { txHash, status: "MINTED" });
+
+        // Update Platform Stats
+        await updateDoc(statsRef, {
+            totalEarnings: increment(1), // 1 ADA Fee
+            totalTransactions: increment(1)
+        });
+
       } catch (txError) {
         console.error("Transaction failed:", txError);
         // await deleteDoc(docRef); // Optional rollback

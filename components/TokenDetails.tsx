@@ -142,6 +142,12 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       return;
     }
 
+    // Check Funding Goal
+    if ((token.raisedAda || 0) >= 100) {
+        toast.error("Bonding curve completed! No more transactions possible.");
+        return;
+    }
+
     setIsBuying(true);
     try {
       const cardano = (window as any).cardano;
@@ -156,8 +162,13 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       const amountOut = calculateAmountOut(currentSupply, amountAdaBig);
       const amountOutNumber = Number(amountOut);
 
+      // Fetch Admin Wallet Address
+      const statsRef = doc(db, "platform_stats", "global");
+      const statsSnap = await getDoc(statsRef);
+      const adminAddress = statsSnap.exists() ? statsSnap.data().adminWalletAddress : undefined;
+
       // Execute Transaction (Fee only)
-      const txHash = await buyToken(walletApi, token.token_policy_id || "", amountOut, currentSupply);
+      const txHash = await buyToken(walletApi, token.token_policy_id || "", amountOut, currentSupply, adminAddress);
       console.log("Buy Tx:", txHash);
 
       // Update Token State in Firestore
@@ -173,12 +184,17 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
         bondingCurve: bondingCurveProgress
       });
 
+      // Update Platform Stats
+      await updateDoc(statsRef, {
+          totalEarnings: increment(amountAdaInput), 
+          totalTransactions: increment(1)
+      });
+
       // Update Holder Balance
       const holderRef = doc(db, "memecoins", tokenId, "holders", walletAddress);
       const holderSnap = await getDoc(holderRef);
       if (holderSnap.exists()) {
         await updateDoc(holderRef, { balance: increment(amountOutNumber) });
-      } else {
         await setDoc(holderRef, { balance: amountOutNumber, address: walletAddress });
       }
 
@@ -221,6 +237,12 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     if (!isConnected || !walletAddress) {
       toast.error("Please connect wallet");
       return;
+    }
+
+    // Check Funding Goal
+    if ((token.raisedAda || 0) >= 100) {
+        toast.error("Bonding curve completed! No more transactions possible.");
+        return;
     }
 
     setIsSelling(true);
@@ -629,16 +651,22 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
               <button
                 onClick={tradeMode === "buy" ? handleBuy : handleSell}
-                disabled={tradeMode === "buy" ? (isBuying || !buyAmount) : (isSelling || !sellAmount)}
+                disabled={
+                    (token.raisedAda || 0) >= 100 || 
+                    (tradeMode === "buy" ? (isBuying || !buyAmount) : (isSelling || !sellAmount))
+                }
                 className={`w-full font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
                   tradeMode === "buy"
                     ? "bg-green-500 hover:bg-green-400 text-black shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_20px_rgba(34,197,94,0.5)]"
                     : "bg-red-500 hover:bg-red-400 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]"
                 }`}
               >
-                {tradeMode === "buy"
-                  ? (isBuying ? "Processing..." : "Quick Buy")
-                  : (isSelling ? "Processing..." : "Quick Sell")
+                {(token.raisedAda || 0) >= 100 
+                    ? "Bonding Curve Completed" 
+                    : (tradeMode === "buy"
+                        ? (isBuying ? "Processing..." : "Quick Buy")
+                        : (isSelling ? "Processing..." : "Quick Sell")
+                      )
                 }
               </button>
             </div>

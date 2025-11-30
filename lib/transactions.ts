@@ -13,49 +13,131 @@ import { initLucid } from "./cardano";
 export const PLATFORM_FEE_ADDRESS =
   "addr_test1qpzqmfvgpdd5tlh7jk3fhnrr3rjcl8mkknkw3j2233tyh7j8kqykw07ktc6wqmrql4alr45f9qqcpcsteypsemf5l4csmsxa7y";
 
-const DECIMALS = 1_000_000n; // 1 ADA = 10^6 Lovelace
-const SLOPE = 100n; // Scaled slope
+const PRECISION = 1_000_000_000n; // High precision for math
+const A = 20n; // Initial Price Scaling (tuned for ~100 ADA at 1M supply)
+const B = 5000n; // Growth Factor (tuned for ~100 ADA at 1M supply)
+// Target: Integral(0 to 1M) of Price(x) dx = 100 ADA (100 * 10^6 Lovelace)
+// Price(x) = A * exp(B * x / 1M) / PRECISION
+// This is a simplified model. For the demo, we will use a curve that hits ~100 ADA at 1M.
 
 // --- Math Functions (Off-chain) ---
 
+// Taylor Series Approximation for e^x
+// x is scaled by PRECISION. Returns e^x scaled by PRECISION.
+// e^x = 1 + x + x^2/2! + x^3/3! + ...
+export function expTaylor(x: bigint): bigint {
+  let sum = PRECISION;
+  let term = PRECISION;
+  let n = 1n;
+
+  // Run for 15 terms for sufficient precision
+  while (n < 15n) {
+    term = (term * x) / (n * PRECISION);
+    sum += term;
+    n += 1n;
+  }
+  return sum;
+}
+
+// Calculate Cost in Lovelace to buy 'amount' tokens starting from 'currentSupply'
 export function calculateCost(currentSupply: bigint, amount: bigint): bigint {
-  const newSupply = currentSupply + amount;
-  // Cost = 0.5 * slope * (new_supply^2 - current_supply^2)
-  return (
-    (SLOPE * (newSupply * newSupply - currentSupply * currentSupply)) / 2n
-  );
+    // We'll use a simpler exponential-like curve for stability if Taylor is too heavy,
+    // but user asked for Taylor.
+    // Let's normalize supply to 0-1 range for the exponent to avoid overflow.
+    // Max Supply = 1,000,000.
+    // x = Supply / 100,000 (scaled down)
+    
+    const scale = 100_000n; 
+    
+    // Cost = Integral(current to current+amount) of (A * e^(x/scale))
+    // Integral = A * scale * (e^((current+amount)/scale) - e^(current/scale))
+    
+    // We need to be careful with BigInt overflow.
+    // Let's use a slightly different approach: Sum of prices? No, too slow.
+    // Let's use the Taylor expansion on the integral difference.
+    
+    const startX = (currentSupply * PRECISION) / scale;
+    const endX = ((currentSupply + amount) * PRECISION) / scale;
+    
+    const expStart = expTaylor(startX);
+    const expEnd = expTaylor(endX);
+    
+    // Cost = A * scale * (expEnd - expStart) / PRECISION
+    // We also need to scale down to Lovelace.
+    // Let's adjust A to make it hit ~100 ADA.
+    // If A=1, scale=100k. e^10 - 1 ~= 22000.
+    // 1 * 100k * 22000 = 2.2B. We want 100M.
+    // So A should be small or we adjust scale.
+    
+    // Let's use a simpler polynomial approximation for the demo if exp is unstable,
+    // BUT user asked for Taylor. We will stick to it.
+    // Let's use a very small growth factor B inside the exp.
+    
+    // Revised Formula: Price = BasePrice * e^(B * Supply / MaxSupply)
+    // Cost = (BasePrice * MaxSupply / B) * (e^(B * (S+amt)/Max) - e^(B * S/Max))
+    
+    const maxSupply = 1_000_000n;
+    const bFactor = 4n * PRECISION; // B = 4 (Growth Factor)
+    const basePrice = 8n; // Base price in Lovelace (tuned for ~107 ADA total)
+    
+    const s1 = (currentSupply * bFactor) / maxSupply;
+    const s2 = ((currentSupply + amount) * bFactor) / maxSupply;
+    
+    const e1 = expTaylor(s1);
+    const e2 = expTaylor(s2);
+    
+    // Integral result
+    // (BasePrice * MaxSupply / B) * (e2 - e1)
+    // Note: e1, e2 are scaled by PRECISION. bFactor is scaled by PRECISION.
+    // The ratio (e2 - e1) / bFactor is dimensionless and correct.
+    
+    const cost = (basePrice * maxSupply * (e2 - e1)) / bFactor;
+    
+    return cost; 
 }
 
 export function calculateRefund(currentSupply: bigint, amount: bigint): bigint {
-  const newSupply = currentSupply - amount;
-  // Refund = 0.5 * slope * (current_supply^2 - new_supply^2)
-  return (
-    (SLOPE * (currentSupply * currentSupply - newSupply * newSupply)) / 2n
-  );
+  // Refund is the same logic but backwards: Integral(current-amount to current)
+  // = Integral(0 to current) - Integral(0 to current-amount)
+  
+    const maxSupply = 1_000_000n;
+    const bFactor = 4n * PRECISION;
+    const basePrice = 8n;
+    
+    const s1 = ((currentSupply - amount) * bFactor) / maxSupply;
+    const s2 = (currentSupply * bFactor) / maxSupply;
+    
+    const e1 = expTaylor(s1);
+    const e2 = expTaylor(s2);
+    
+    const refund = (basePrice * maxSupply * (e2 - e1)) / bFactor;
+    
+    return refund;
 }
 
 export function calculateAmountOut(currentSupply: bigint, paymentAmount: bigint): bigint {
-  // paymentAmount is in Lovelace
-  // Cost = (SLOPE * (newSupply^2 - currentSupply^2)) / 2
-  // 2 * Cost / SLOPE = newSupply^2 - currentSupply^2
-  // newSupply = sqrt((2 * Cost / SLOPE) + currentSupply^2)
+  // Inverse of calculateCost.
+  // Given Cost, find Amount.
+  // Since we have a complex function, Binary Search is the safest and easiest way to invert it.
   
-  const bCost = paymentAmount;
-  const bSlope = SLOPE;
-  const bCurrentSupply = currentSupply;
-
-  const term = (2n * bCost) / bSlope + (bCurrentSupply * bCurrentSupply);
+  let low = 0n;
+  let high = 1_000_000n - currentSupply; // Can't buy more than remaining
+  let ans = 0n;
   
-  // Integer square root
-  let x = term;
-  let y = (x + 1n) / 2n;
-  while (y < x) {
-    x = y;
-    y = (x + term / x) / 2n;
+  // 20 iterations is enough for 1M range
+  for (let i = 0; i < 30; i++) {
+      const mid = (low + high) / 2n;
+      const cost = calculateCost(currentSupply, mid);
+      
+      if (cost <= paymentAmount) {
+          ans = mid;
+          low = mid + 1n;
+      } else {
+          high = mid - 1n;
+      }
   }
-  const newSupply = x;
   
-  return newSupply - bCurrentSupply;
+  return ans;
 }
 
 // --- Transactions ---
@@ -69,6 +151,7 @@ export const mintToken = async (
     image: string;
   },
   metadataHash: string,
+  feeAddress: string = PLATFORM_FEE_ADDRESS // Default to hardcoded if not provided
 ): Promise<TxHash> => {
   try {
     const lucid = await initLucid(walletApi);
@@ -76,7 +159,7 @@ export const mintToken = async (
     // Simple 1 ADA fee transfer
     const tx = await lucid
       .newTx()
-      .payToAddress(PLATFORM_FEE_ADDRESS, { lovelace: 1_000_000n })
+      .payToAddress(feeAddress, { lovelace: 1_000_000n })
       .complete();
 
     const signedTx = await tx.sign().complete();
@@ -91,7 +174,8 @@ export const buyToken = async (
   walletApi: any,
   policyId: string, // Not used in simple mode but kept for signature compatibility
   amountToBuy: bigint,
-  currentSupply: bigint = 0n // Added to calculate cost correctly
+  currentSupply: bigint = 0n, // Added to calculate cost correctly
+  feeAddress: string = PLATFORM_FEE_ADDRESS
 ): Promise<TxHash> => {
   try {
     const lucid = await initLucid(walletApi);
@@ -102,7 +186,7 @@ export const buyToken = async (
     // Simple transfer of cost to platform
     const tx = await lucid
       .newTx()
-      .payToAddress(PLATFORM_FEE_ADDRESS, { lovelace: cost })
+      .payToAddress(feeAddress, { lovelace: cost })
       .complete();
 
     const signedTx = await tx.sign().complete();
@@ -135,7 +219,7 @@ export const sellToken = async (
 };
 
 
-export const launchLP = async (walletApi: any, token: any) => {
+export const launchLP = async (walletApi: any, token: any, feeAddress: string = PLATFORM_FEE_ADDRESS) => {
   try {
     const lucid = await initLucid(walletApi);
     console.log("Simulating LP Launch for", token.symbol);
@@ -143,7 +227,7 @@ export const launchLP = async (walletApi: any, token: any) => {
     // Placeholder Tx
     const tx = await lucid
       .newTx()
-      .payToAddress(PLATFORM_FEE_ADDRESS, { lovelace: 1_000_000n }) // Dummy action
+      .payToAddress(feeAddress, { lovelace: 1_000_000n }) // Dummy action
       .complete();
 
     const signedTx = await tx.sign().complete();
