@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.ipfs.w3s.link",
       },
+      {
+        protocol: "https",
+        hostname: "images.pump.fun",
+      },
     ],
   },
 };

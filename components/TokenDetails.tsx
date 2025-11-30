@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../lib/firebase";
-import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit } from "firebase/firestore";
 import { useWallet } from "../context/WalletContext";
 import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw } from "lucide-react";
 import Image from "next/image";
@@ -16,6 +16,16 @@ interface Comment {
   createdAt: any;
 }
 
+interface Trade {
+  id: string;
+  type: 'buy' | 'sell';
+  amountAda: number;
+  amountToken: number;
+  account: string;
+  timestamp: any;
+  txnHash: string;
+}
+
 export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [token, setToken] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +36,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const { isConnected, walletAddress } = useWallet();
 
   useEffect(() => {
@@ -52,6 +63,25 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
         ...doc.data(),
       })) as Comment[];
       setComments(fetchedComments);
+    });
+
+    return () => unsub();
+  }, [tokenId]);
+
+  // Fetch Trades
+  useEffect(() => {
+    const q = query(
+      collection(db, "memecoins", tokenId, "trades"),
+      orderBy("timestamp", "desc"),
+      limit(50)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const fetchedTrades = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Trade[];
+      setTrades(fetchedTrades);
     });
 
     return () => unsub();
@@ -95,6 +125,17 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
       const txHash = await buyToken(walletApi, token, parseFloat(buyAmount));
       console.log("Buy Tx:", txHash);
+
+      // Record Trade in Firestore
+      await addDoc(collection(db, "memecoins", tokenId, "trades"), {
+        type: "buy",
+        amountAda: parseFloat(buyAmount),
+        amountToken: 0, // In a real app, calculate this based on price
+        account: walletAddress,
+        timestamp: serverTimestamp(),
+        txnHash: txHash,
+      });
+
       toast.success("Buy transaction submitted!");
       setBuyAmount("");
     } catch (error) {
@@ -307,17 +348,48 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-4 text-xs text-[var(--muted)] font-medium mb-2 px-2">
-                    <span>Account</span>
-                    <span className="text-right">Type</span>
-                    <span className="text-right">ADA</span>
-                    <span className="text-right">Date</span>
-                  </div>
-                  {/* Trades List (Placeholder) */}
-                  <div className="text-center py-8 text-[var(--muted)] text-sm">
-                    No trades yet.
-                  </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="text-xs text-[var(--muted)] border-b border-[var(--border-color)]">
+                        <th className="font-medium py-2 pl-2">Account</th>
+                        <th className="font-medium py-2">Type</th>
+                        <th className="font-medium py-2">Amount (ADA)</th>
+                        <th className="font-medium py-2">Amount ({token.symbol})</th>
+                        <th className="font-medium py-2">Time</th>
+                        <th className="font-medium py-2 pr-2">Txn</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trades.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-[var(--muted)] text-sm">
+                            No trades yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        trades.map((trade) => (
+                          <tr key={trade.id} className="border-b border-[var(--border-color)] last:border-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-xs">
+                            <td className="py-2 pl-2 flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-green-400 to-blue-500"></div>
+                              <span className="font-medium text-[var(--foreground)]">{trade.account.slice(0, 6)}</span>
+                            </td>
+                            <td className={`py-2 font-bold ${trade.type === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
+                              {trade.type === 'buy' ? 'Buy' : 'Sell'}
+                            </td>
+                            <td className="py-2 text-[var(--foreground)]">{trade.amountAda}</td>
+                            <td className="py-2 text-[var(--foreground)]">{trade.amountToken || "-"}</td>
+                            <td className="py-2 text-[var(--muted)]">{formatTimeAgo(trade.timestamp)}</td>
+                            <td className="py-2 pr-2">
+                              <a href={`https://preprod.cardanoscan.io/transaction/${trade.txnHash}`} target="_blank" className="text-blue-500 hover:underline truncate max-w-[60px] block">
+                                {trade.txnHash.slice(0, 6)}
+                              </a>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
