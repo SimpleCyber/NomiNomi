@@ -20,8 +20,9 @@ export async function searchCoins(searchQuery: string): Promise<Market[]> {
 
     try {
         const coinsRef = collection(db, "memecoins");
-        // Query for name starting with search query
-        const q = query(
+        
+        // Try exact match first (which covers case-sensitive if user typed correctly)
+        let q = query(
             coinsRef,
             orderBy("name"),
             startAt(normalizedQuery),
@@ -29,7 +30,20 @@ export async function searchCoins(searchQuery: string): Promise<Market[]> {
             limit(10)
         );
 
-        const querySnapshot = await getDocs(q);
+        let querySnapshot = await getDocs(q);
+
+        // If no results and query is lowercase, try capitalizing first letter
+        if (querySnapshot.empty && normalizedQuery.length > 0 && normalizedQuery[0] === normalizedQuery[0].toLowerCase()) {
+            const capitalizedQuery = normalizedQuery.charAt(0).toUpperCase() + normalizedQuery.slice(1);
+            q = query(
+                coinsRef,
+                orderBy("name"),
+                startAt(capitalizedQuery),
+                endAt(capitalizedQuery + "\uf8ff"),
+                limit(10)
+            );
+            querySnapshot = await getDocs(q);
+        }
         const coins: Market[] = [];
 
         querySnapshot.forEach((doc) => {

@@ -53,9 +53,7 @@ export default function SearchResults({ onClose, searchQuery = "" }: SearchResul
   };
 
   const handleCoinClick = (coinId: number | string) => {
-    // Assuming there's a coin details page, e.g., /coin/[id] or /market/[id]
-    // For now, just closing as per original behavior, but ideally should navigate
-    // router.push(`/market/${coinId}`); 
+    router.push(`/token/${coinId}`); 
     onClose();
   };
 

@@ -286,7 +286,7 @@ export default function ProfileView({
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center overflow-hidden">
                   <img
-                    src="https://cryptologos.cc/logos/cardano-ada-logo.png"
+                    src="https://cryptologos.cc/logos/cardano-sol-logo.png"
                     alt="ADA"
                     className="w-6 h-6 object-contain"
                   />
