@@ -76,6 +76,6 @@ export default function CandleChart({ data }: CandleChartProps) {
     }, [data]);
 
     return (
-        <div ref={chartContainerRef} className="w-full h-full" />
+        <div ref={chartContainerRef} className="w-[80%] mt-10 h-full" />
     );
 }
