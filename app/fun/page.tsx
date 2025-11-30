@@ -34,32 +34,29 @@ export default function FunPage() {
             <div className="flex-1 flex flex-col ml-0 md:ml-[var(--sidebar-width)] transition-all duration-300">
                 <Navbar />
 
-                <div className="p-6 md:p-8 relative">
-                    {/* Background Blobs */}
-                    <div className="absolute top-0 left-0 w-full h-96 bg-violet-500/5 blur-[100px] pointer-events-none" />
-                    
-                    <div className="max-w-[1600px] mx-auto relative z-10">
+                <div className="p-6 md:p-8">
+                    <div className="max-w-[1600px] mx-auto">
                         {/* Header */}
-                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                             <div>
-                                <h1 className="text-4xl md:text-5xl font-black text-[var(--foreground)] tracking-tight mb-3">
-                                    Have <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-fuchsia-500">Fun</span>
+                                <h1 className="text-3xl font-bold text-[var(--foreground)] mb-2">
+                                    Have Fun
                                 </h1>
-                                <p className="text-[var(--muted)] text-lg max-w-md">
+                                <p className="text-[var(--muted)] text-sm max-w-md">
                                     The community meme stash. Upload, share, and vibe with the best clips and images.
                                 </p>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex flex-wrap items-center gap-3">
                                 {/* Filter Tabs */}
-                                <div className="flex bg-[var(--card-bg)]/50 backdrop-blur-sm p-1.5 rounded-2xl border border-[var(--border-color)] shadow-sm">
+                                <div className="flex bg-[var(--card-bg)] p-1 rounded-lg border border-[var(--border-color)]">
                                     {(["all", "images", "videos"] as const).map((tab) => (
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTab(tab)}
-                                            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all capitalize ${activeTab === tab
-                                                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25 scale-105"
-                                                    : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--hover-bg)]"
+                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize ${activeTab === tab
+                                                    ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
+                                                    : "text-[var(--muted)] hover:text-[var(--foreground)]"
                                                 }`}
                                         >
                                             {tab}
@@ -71,10 +68,10 @@ export default function FunPage() {
                                 <button
                                     onClick={() => setIsUploadModalOpen(true)}
                                     disabled={!isConnected}
-                                    className="px-6 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold hover:shadow-lg hover:shadow-violet-500/25 hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
+                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                                     title={!isConnected ? "Connect wallet to upload" : "Upload meme"}
                                 >
-                                    <Plus size={20} strokeWidth={2.5} />
+                                    <Plus size={18} />
                                     <span className="hidden sm:inline">Upload Meme</span>
                                 </button>
                             </div>
