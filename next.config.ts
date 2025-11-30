@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: true, // allow all URLs
     remotePatterns: [
       {
         protocol: "https",
@@ -29,7 +30,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "i0.wp.com", // <-- REQUIRED for your GIF
+        hostname: "i0.wp.com",
+      },
+      {
+        protocol: "https",
+        hostname: "imgs.search.brave.com", // <-- added Brave Images
       },
     ],
   },
