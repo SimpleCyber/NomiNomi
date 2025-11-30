@@ -43,6 +43,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [userBalance, setUserBalance] = useState<number>(0);
   const [estTokens, setEstTokens] = useState<string>("0");
+  const [holders, setHolders] = useState<any[]>([]);
   const { isConnected, walletAddress } = useWallet();
 
   // Fetch User Balance
@@ -87,23 +88,28 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     return () => unsub();
   }, [tokenId]);
 
-  // Fetch Trades
+  // Fetch Trades & Holders
   useEffect(() => {
-    const q = query(
-      collection(db, "memecoins", tokenId, "trades"),
-      orderBy("timestamp", "desc"),
-      limit(50)
-    );
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const fetchedTrades = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Trade[];
-      setTrades(fetchedTrades);
+    // Fetch Trades
+    const tradesRef = collection(db, "memecoins", tokenId, "trades");
+    const qTrades = query(tradesRef, orderBy("timestamp", "desc"), limit(50));
+    const unsubscribeTrades = onSnapshot(qTrades, (snapshot) => {
+      const tradesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setTrades(tradesData as Trade[]);
     });
 
-    return () => unsub();
+    // Fetch Holders
+    const holdersRef = collection(db, "memecoins", tokenId, "holders");
+    const qHolders = query(holdersRef, orderBy("balance", "desc"), limit(10));
+    const unsubscribeHolders = onSnapshot(qHolders, (snapshot) => {
+        const holdersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setHolders(holdersData);
+    });
+
+    return () => {
+      unsubscribeTrades();
+      unsubscribeHolders();
+    };
   }, [tokenId]);
 
   const handlePostComment = async () => {
@@ -151,7 +157,6 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       const amountOutNumber = Number(amountOut);
 
       // Execute Transaction (Fee only)
-      // Fix: Pass amountOut (token amount) instead of amountAdaBig (ADA amount)
       const txHash = await buyToken(walletApi, token.token_policy_id || "", amountOut, currentSupply);
       console.log("Buy Tx:", txHash);
 
@@ -313,8 +318,6 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
         <Loader2 className="animate-spin text-[var(--muted)]" />
       </div>
     );
-  if (!token) return <div className="p-8 text-center text-[var(--muted)]">Token not found</div>;
-
   if (!token) return <div className="p-8 text-center text-[var(--muted)]">Token not found</div>;
 
   const progress = Math.min(((token.raisedAda || 0) / 100) * 100, 100);
@@ -676,6 +679,31 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">24h Volume</span>
               <span className="font-bold text-sm">{token.volume || "$0"}</span>
+            </div>
+          </div>
+
+          {/* Holder Distribution */}
+          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-4">
+            <h3 className="font-bold text-sm mb-3">Holder Distribution</h3>
+            <div className="space-y-2">
+                {holders.map((holder, index) => {
+                    const percentage = token.currentSupply ? ((holder.balance / token.currentSupply) * 100).toFixed(2) : "0.00";
+                    return (
+                        <div key={holder.id} className="flex justify-between items-center text-xs">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[var(--muted)]">{index + 1}.</span>
+                                <span className="font-medium truncate max-w-[100px]">
+                                    {holder.address === walletAddress ? "You" : `${holder.address.slice(0, 4)}...${holder.address.slice(-4)}`}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[var(--muted)]">{holder.balance.toLocaleString()}</span>
+                                <span className="font-bold text-[var(--foreground)]">{percentage}%</span>
+                            </div>
+                        </div>
+                    );
+                })}
+                {holders.length === 0 && <div className="text-center text-[var(--muted)] text-xs">No holders yet</div>}
             </div>
           </div>
 
