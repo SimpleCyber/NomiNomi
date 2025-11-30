@@ -7,6 +7,7 @@ import {
   PlusCircle,
   HelpCircle,
   Smile,
+  HandMetal,
 } from "lucide-react";
 
 // --- Types ---
@@ -230,10 +231,11 @@ export const MENU_ITEMS: MenuItem[] = [
   { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
   { name: "My Profile", icon: User, href: "/profile" },
   { name: "Create coin", icon: PlusCircle, href: "/createcoin" },
-  { name: "Have Fun", icon: Smile, href: "/fun" },
+  
 ];
 
 export const BOTTOM_MENU_ITEMS: MenuItem[] = [
+    { name: "Have Fun", icon: HandMetal, href: "/fun" },
   { name: "Support", icon: HelpCircle, href: "/support" },
 ];
 
