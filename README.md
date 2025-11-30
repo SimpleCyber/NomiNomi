@@ -18,10 +18,12 @@
 
 ## 🎮 Features
 
-🔥 **Streak Tracking** – Don't break the chain!  
-📊 **Progress Analytics** – Visualize your journey  
-👥 **Friend System** – Compete and stay motivated  
-🌙 **Dark Mode** – Easy on the eyes  
+🔥 **Token Creation** – Create tokens with zero coding knowledge 
+📈 **Buy / sell** – Buy and sell the coins easily
+📊 **Livestream** – Have the livestream and grow your meme coin
+👥 **Friend Chat** – Compete and stay motivated  
+🪙 **Swap Coins** – Convert any crypto to Cardano 
+😁 **Meme Place** – Any user can upload and view meme
 📱 **Responsive** – Track anywhere, anytime
 
 ## ⚡ Quick Start
