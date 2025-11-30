@@ -6,6 +6,7 @@ import {
   User,
   PlusCircle,
   HelpCircle,
+  Smile,
 } from "lucide-react";
 
 // --- Types ---
@@ -29,9 +30,6 @@ export interface Market {
   txns: number;
   traders: number;
   image: string;
-  description?: string;
-  creatorAddress?: string;
-  createdAt?: any;
 }
 
 export interface MenuItem {
@@ -223,6 +221,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
   { name: "My Profile", icon: User, href: "/profile" },
   { name: "Create coin", icon: PlusCircle, href: "/createcoin" },
+  { name: "Have Fun", icon: Smile, href: "/fun" },
 ];
 
 export const BOTTOM_MENU_ITEMS: MenuItem[] = [
@@ -250,7 +249,7 @@ export const HERO_SLIDES: HeroSlide[] = [
   },
   {
     id: 3,
-    image: "/home-banner-stacked-yield-sol-new.webp",
+    image: "/home-banner-stacked-yield-SOL-new.webp",
     title: "Stacked Yield",
     description: "Earn yield on your ADA assets.",
     buttonText: "Start Earning",
