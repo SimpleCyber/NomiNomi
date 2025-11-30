@@ -93,7 +93,15 @@ Contributions are what make the open source community such an amazing place to l
     <img src="https://contrib.rocks/image?repo=SimpleCyber/NomiNomi" alt="Contributors" />
   </a>
 </div>
-
+![167583328](https://github.com/user-attachments/assets/79d2a91b-b1ad-4704-85fe-e02cac53f122)
+![147![150419314](https://github.com/user-attachments/assets/158ac602-79c0-473f-974f-76316d72d661)
+042529](https://github.com/user-attachments/assets/827620a6-49c9-44f0-a2e8-b195f98a71ca)
+@SimpleCyber
+SimpleCyber Satyam Yadav
+@rishabh-kukdeja
+rishabh-kukdeja Rishabh Kukdeja
+@dhruvpal102005
+dhruvpal102005 Dhruv
 ---
 
 <div align="center">
