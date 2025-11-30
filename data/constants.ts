@@ -29,6 +29,9 @@ export interface Market {
   txns: number;
   traders: number;
   image: string;
+  description?: string;
+  creatorAddress?: string;
+  createdAt?: any;
 }
 
 export interface MenuItem {
