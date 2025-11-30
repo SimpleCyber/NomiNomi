@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import Link from "next/link";
 
 interface Coin {
   id: string;
@@ -32,7 +33,7 @@ const StatCard = ({ title, coin }: { title: string; coin: Coin | null }) => {
   const holders = coin.holders || Math.floor(Math.random() * 500) + 10;
 
   return (
-    <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-4 flex-1 hover:border-blue-500/50 transition-colors cursor-pointer">
+    <Link href={`/token/${coin.id}`} className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-4 flex-1 hover:border-blue-500/50 transition-colors cursor-pointer block">
       <div className="flex justify-between items-center mb-4 text-xs text-[var(--muted)] font-medium">
         <span>{title}</span>
       </div>
@@ -44,6 +45,11 @@ const StatCard = ({ title, coin }: { title: string; coin: Coin | null }) => {
             src={coin.image || "/placeholder.png"}
             alt={coin.name}
             className="w-12 h-12 rounded-full object-cover border border-[var(--border-color)]"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement!.innerText = coin.symbol[0];
+              e.currentTarget.parentElement!.className = "w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-[var(--foreground)] border border-[var(--border-color)]";
+            }}
           />
           <div className="flex-1">
             <div className="font-bold text-[var(--foreground)]">
@@ -69,11 +75,10 @@ const StatCard = ({ title, coin }: { title: string; coin: Coin | null }) => {
             </div>
             <div className="w-full h-1.5 bg-[var(--input-bg)] rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-300 ${
-                  bondingCurve > 80
-                    ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                    : "bg-emerald-400"
-                }`}
+                className={`h-full rounded-full transition-all duration-300 ${bondingCurve > 80
+                  ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                  : "bg-emerald-400"
+                  }`}
                 style={{ width: `${bondingCurve}%` }}
               />
             </div>
@@ -88,7 +93,7 @@ const StatCard = ({ title, coin }: { title: string; coin: Coin | null }) => {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

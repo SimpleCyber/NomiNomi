@@ -6,6 +6,8 @@ import { Sprout, User, MessageCircle } from "lucide-react";
 import { SEARCH_RESULTS } from "@/data/constants";
 import { useState, useEffect } from "react";
 import { searchUsers, UserProfile } from "@/lib/user";
+import { searchCoins } from "@/lib/coin";
+import { Market } from "@/data/constants";
 import { useRouter } from "next/navigation";
 
 interface SearchResultsProps {
@@ -15,6 +17,7 @@ interface SearchResultsProps {
 
 export default function SearchResults({ onClose, searchQuery = "" }: SearchResultsProps) {
   const [userResults, setUserResults] = useState<UserProfile[]>([]);
+  const [coinResults, setCoinResults] = useState<Market[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
 
@@ -24,8 +27,12 @@ export default function SearchResults({ onClose, searchQuery = "" }: SearchResul
       if (searchQuery.trim()) {
         setIsSearching(true);
         try {
-          const results = await searchUsers(searchQuery);
-          setUserResults(results);
+          const [users, coins] = await Promise.all([
+            searchUsers(searchQuery),
+            searchCoins(searchQuery)
+          ]);
+          setUserResults(users);
+          setCoinResults(coins);
         } catch (error) {
           console.error("Search failed:", error);
         } finally {
@@ -33,6 +40,7 @@ export default function SearchResults({ onClose, searchQuery = "" }: SearchResul
         }
       } else {
         setUserResults([]);
+        setCoinResults([]);
       }
     }, 500); // 500ms debounce
 
@@ -44,11 +52,12 @@ export default function SearchResults({ onClose, searchQuery = "" }: SearchResul
     onClose();
   };
 
-  // Filter coins based on search query (simple client-side filter)
-  const filteredCoins = SEARCH_RESULTS.coins.filter(coin =>
-    coin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    coin.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCoinClick = (coinId: number | string) => {
+    // Assuming there's a coin details page, e.g., /coin/[id] or /market/[id]
+    // For now, just closing as per original behavior, but ideally should navigate
+    // router.push(`/market/${coinId}`); 
+    onClose();
+  };
 
   return (
     <div className="absolute top-full left-0 w-full mt-2 bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] shadow-2xl overflow-hidden z-50">
@@ -56,20 +65,20 @@ export default function SearchResults({ onClose, searchQuery = "" }: SearchResul
         {/* Coins Section */}
         <div className="p-2">
           <h3 className="text-xs font-semibold text-[var(--muted)] px-2 mb-2 uppercase tracking-wider">
-            Coins
+            Coins {isSearching && "(Searching...)"}
           </h3>
-          {filteredCoins.length > 0 ? (
-            filteredCoins.map((coin, idx) => (
+          {coinResults.length > 0 ? (
+            coinResults.map((coin) => (
               <div
-                key={idx}
+                key={coin.id}
                 className="flex items-center justify-between p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg cursor-pointer group transition-colors"
-                onClick={onClose}
+                onClick={() => handleCoinClick(coin.id)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden text-xs font-bold text-[var(--foreground)]">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden text-xs font-bold text-[var(--foreground)] relative">
                     {/* Placeholder Image */}
                     <img src={coin.image} alt={coin.name} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                    <span className="absolute">{coin.name[0]}</span>
+                    <span className="absolute inset-0 flex items-center justify-center -z-10">{coin.name[0]}</span>
                   </div>
                   <div>
                     <div className="font-bold text-sm text-[var(--foreground)]">
@@ -92,7 +101,9 @@ export default function SearchResults({ onClose, searchQuery = "" }: SearchResul
               </div>
             ))
           ) : (
-            <div className="px-4 py-2 text-sm text-[var(--muted)]">No coins found.</div>
+            <div className="px-4 py-2 text-sm text-[var(--muted)]">
+              {searchQuery.trim() ? "No coins found." : "Type to search coins..."}
+            </div>
           )}
         </div>
 

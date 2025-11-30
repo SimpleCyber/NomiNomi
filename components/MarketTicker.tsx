@@ -1,82 +1,80 @@
 "use client";
 
-import { LayoutGrid, List } from "lucide-react";
-import { useState } from "react";
+import { LayoutGrid, List, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Market } from "@/data/constants";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
-import { useEffect } from "react";
-import { Market, MARKETS } from "@/data/constants";
+import { collection, query, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
+import Link from "next/link";
 
 export default function MarketTicker() {
   const [activeTab, setActiveTab] = useState("Spot");
-  const [viewMode, setViewMode] = useState<"list" | "cards">("list");
+  const [viewMode, setViewMode] = useState<"list" | "cards">("cards");
   const [markets, setMarkets] = useState<Market[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch coins from Firestore
   useEffect(() => {
-    const fetchCoins = async () => {
+    const fetchMarkets = async () => {
       try {
         const q = query(
           collection(db, "memecoins"),
           orderBy("createdAt", "desc"),
-          limit(20)
+          limit(50)
         );
         const querySnapshot = await getDocs(q);
-        
-        const fetchedMarkets: Market[] = querySnapshot.docs.map((doc, index) => {
+
+        const fetchedMarkets: Market[] = querySnapshot.docs.map(doc => {
           const data = doc.data();
-          // Generate dummy data for missing fields
-          const isPositive = Math.random() > 0.5;
-          const changeValue = (Math.random() * 20).toFixed(2);
-          
+
+          // Calculate age
+          let age = "New";
+          if (data.createdAt) {
+            const createdAt = data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate()
+              : new Date(data.createdAt);
+            const diffInSeconds = Math.floor((new Date().getTime() - createdAt.getTime()) / 1000);
+
+            if (diffInSeconds < 60) age = `${diffInSeconds}s`;
+            else if (diffInSeconds < 3600) age = `${Math.floor(diffInSeconds / 60)}m`;
+            else if (diffInSeconds < 86400) age = `${Math.floor(diffInSeconds / 3600)}h`;
+            else age = `${Math.floor(diffInSeconds / 86400)}d`;
+          }
+
           return {
             id: doc.id,
             name: data.name || "Unknown",
             symbol: data.symbol || "UNK",
-            price: `$${(Math.random() * 1000).toFixed(2)}`, // Dummy price
-            volume: `$${(Math.random() * 100000).toFixed(2)}`, // Dummy volume
-            marketCap: `$${(Math.random() * 1000000).toFixed(2)}`, // Dummy mcap
-            change: `${isPositive ? "+" : "-"}${changeValue}%`,
-            change5m: `${Math.random() > 0.5 ? "+" : "-"}${(Math.random() * 5).toFixed(2)}%`,
-            change1h: `${isPositive ? "+" : "-"}${changeValue}%`,
-            change6h: `${Math.random() > 0.5 ? "+" : "-"}${(Math.random() * 10).toFixed(2)}%`,
-            isPositive: isPositive,
-            chartData: Array.from({ length: 10 }, () => Math.floor(Math.random() * 50) + 10),
-            bondingCurve: Math.floor(Math.random() * 100),
-            ath: `$${(Math.random() * 2000).toFixed(2)}`,
-            age: "1h", // Dummy age
-            txns: Math.floor(Math.random() * 1000),
-            traders: Math.floor(Math.random() * 500),
+            price: data.price || "$0.00",
+            volume: data.volume || "$0",
+            marketCap: data.marketCap || "$0",
+            change: data.change || "0%",
+            change5m: data.change5m || "0%",
+            change1h: data.change1h || "0%",
+            change6h: data.change6h || "0%",
+            isPositive: data.isPositive !== undefined ? data.isPositive : true,
+            chartData: data.chartData || [],
+            bondingCurve: data.bondingCurve || 0,
+            ath: data.ath || "$0",
+            age: age,
+            txns: data.txns || 0,
+            traders: data.traders || 0,
             image: data.image || "/placeholder.png",
+            description: data.description || "",
+            creatorAddress: data.creatorAddress || "",
           };
         });
 
-        // If no coins found, fallback to dummy MARKETS
-        if (fetchedMarkets.length === 0) {
-            setMarkets(MARKETS);
-        } else {
-            setMarkets(fetchedMarkets);
-        }
+        setMarkets(fetchedMarkets);
       } catch (error) {
         console.error("Error fetching markets:", error);
-        setMarkets(MARKETS); // Fallback
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchCoins();
+    fetchMarkets();
   }, []);
-
-  // Shuffle markets when tab changes
-  useEffect(() => {
-    if (markets.length > 0) {
-      const shuffled = [...markets].sort(() => Math.random() - 0.5);
-      setMarkets(shuffled);
-    }
-  }, [activeTab]);
 
   return (
     <div className="w-full max-w-[1400px] mx-auto mt-8 px-6 pb-12">
@@ -86,11 +84,10 @@ export default function MarketTicker() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === tab
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === tab
                   ? "bg-black/5 dark:bg-white/10 text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:text-blue-500"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -100,28 +97,30 @@ export default function MarketTicker() {
         <div className="flex items-center bg-[var(--card-bg)] rounded-lg p-1 border border-[var(--border-color)]">
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "list"
+            className={`p-2 rounded-md transition-colors ${viewMode === "list"
                 ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
+              }`}
           >
             <List size={18} />
           </button>
           <button
             onClick={() => setViewMode("cards")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "cards"
+            className={`p-2 rounded-md transition-colors ${viewMode === "cards"
                 ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
+              }`}
           >
             <LayoutGrid size={18} />
           </button>
         </div>
       </div>
 
-      {viewMode === "list" ? (
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--muted)]" />
+        </div>
+      ) : viewMode === "list" ? (
         <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] p-6 overflow-hidden">
           <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full min-w-[1200px] border-collapse">
@@ -164,13 +163,14 @@ export default function MarketTicker() {
                     className="border-b border-[var(--border-color)] last:border-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer h-16"
                   >
                     <td className="pl-4">
-                      <div className="flex items-center gap-3">
+                      <Link href={`/token/${market.id}`} className="flex items-center gap-3 w-full h-full">
                         <span className="text-[var(--muted)] text-sm w-4">
                           #{index + 1}
                         </span>
                         <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-[var(--foreground)] overflow-hidden">
-                          <img 
-                            src={market.image} 
+                          {/* Placeholder for image */}
+                          <img
+                            src={market.image}
                             alt={market.symbol}
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -187,7 +187,7 @@ export default function MarketTicker() {
                             {market.symbol}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     </td>
                     <td className="text-center">
                       <div className="flex justify-center">
@@ -254,75 +254,79 @@ export default function MarketTicker() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {markets.map((market) => (
-            <div
+            <Link
+              href={`/token/${market.id}`}
               key={market.id}
-              className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-5 hover:border-blue-500/50 transition-colors cursor-pointer group"
+              className="bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-4 hover:border-blue-500/50 transition-colors cursor-pointer group flex gap-4"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl font-bold text-[var(--foreground)] overflow-hidden">
-                    <img 
-                      src={market.image} 
-                      alt={market.symbol}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.innerText = market.symbol[0];
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-[var(--foreground)]">
+              {/* Left: Image */}
+              <div className="w-32 h-32 flex-shrink-0">
+                <div className="w-full h-full rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden relative">
+                  {/* Placeholder for image - using market.image if available or symbol char */}
+                  <img
+                    src={market.image}
+                    alt={market.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                      e.currentTarget.parentElement!.innerHTML = `<span class="text-4xl font-bold text-[var(--foreground)]">${market.symbol[0]}</span>`;
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Right: Content */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  {/* Header: Name & Ticker */}
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <h3 className="font-bold text-[var(--foreground)] text-sm truncate">
                       {market.name}
                     </h3>
-                    <p className="text-sm text-[var(--muted)]">
+                    <span className="text-xs text-[var(--muted)] truncate">
                       {market.symbol}
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className={`text-sm font-bold ${market.change.startsWith("+") ? "text-emerald-500" : "text-red-500"}`}
-                >
-                  {market.change}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Market Cap</span>
-                  <span className="font-medium text-[var(--foreground)]">
-                    {market.marketCap}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--muted)]">Age</span>
-                  <span className="font-medium text-[var(--foreground)]">
-                    {market.age}
-                  </span>
-                </div>
-
-                <div className="pt-2">
-                  <div className="flex justify-between text-xs text-[var(--muted)] mb-1">
-                    <span>Bonding Curve</span>
-                    <span
-                      className={
-                        market.bondingCurve > 80
-                          ? "text-amber-400"
-                          : "text-emerald-400"
-                      }
-                    >
-                      {market.bondingCurve}%
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-[var(--input-bg)] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${market.bondingCurve > 80 ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]" : "bg-emerald-400"}`}
-                      style={{ width: `${market.bondingCurve}%` }}
-                    ></div>
+
+                  {/* Creator Info */}
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] mb-2">
+                    <div className="w-4 h-4 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <span className="text-[8px]">👤</span>
+                    </div>
+                    <span className="truncate">
+                      {market.creatorAddress ? `Created by ${market.creatorAddress.slice(0, 4)}...${market.creatorAddress.slice(-4)}` : "Created by Dev"}
+                    </span>
+                    <span>•</span>
+                    <span>{market.age} ago</span>
+                  </div>
+
+                  {/* Market Cap & Progress */}
+                  <div className="mb-1">
+                    <div className="flex items-center gap-2 text-xs mb-1">
+                      <span className="text-[var(--muted)]">MC</span>
+                      <span className="font-bold text-[var(--foreground)]">{market.marketCap}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-[var(--input-bg)] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${market.isPositive ? "bg-emerald-400" : "bg-red-400"}`}
+                          style={{ width: `${market.bondingCurve}%` }}
+                        ></div>
+                      </div>
+                      <span className={`text-xs font-medium ${market.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                        {market.change}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Description */}
+                <p className="text-xs text-[var(--muted)] line-clamp-2 mt-1">
+                  {market.description || `${market.name} is a community driven project on Cardano. Join the movement!`}
+                </p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
