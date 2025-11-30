@@ -6,10 +6,14 @@ import {
   ChevronLeft,
   Sun,
   Moon,
+  PlusCircle,
+  LogOut,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MENU_ITEMS, BOTTOM_MENU_ITEMS } from "@/data/constants";
+import { useWallet } from "@/context/WalletContext";
 
 export function SidebarContent({
   isCollapsed,
@@ -25,6 +29,7 @@ export function SidebarContent({
   const { theme, toggleThemeWithAnimation, buttonRef } = useThemeAnimation();
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<{ name: string; top: number } | null>(null);
+  const { isConnected, walletAddress, connectWallet, disconnectWallet } = useWallet();
 
   return (
     <div className="flex flex-col h-full bg-[var(--sidebar-bg)] relative">
@@ -161,6 +166,61 @@ export function SidebarContent({
             )}
           </Link>
         ))}
+
+        {/* Mobile Only Actions */}
+        {isMobile && (
+          <div className="mt-2 pt-2 border-t border-[var(--sidebar-border)] flex flex-col gap-2">
+            <Link
+              href="/createcoin"
+              onClick={onClose}
+              className="group flex items-center gap-3 p-2 rounded-lg bg-[var(--primary)] text-white hover:bg-violet-700 transition-colors"
+            >
+              <div className="min-w-[24px] flex justify-center">
+                <PlusCircle size={20} />
+              </div>
+              <span className="whitespace-nowrap overflow-hidden text-sm font-medium">
+                Create Coin
+              </span>
+            </Link>
+
+            {isConnected ? (
+              <div className="flex flex-col gap-2">
+                <div className="px-2 py-1 text-xs text-[var(--muted)] truncate">
+                  Connected: {walletAddress?.slice(0, 8)}...{walletAddress?.slice(-4)}
+                </div>
+                <button
+                  onClick={() => {
+                    disconnectWallet();
+                    if (onClose) onClose();
+                  }}
+                  className="group flex items-center gap-3 p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"
+                >
+                  <div className="min-w-[24px] flex justify-center">
+                    <LogOut size={20} />
+                  </div>
+                  <span className="whitespace-nowrap overflow-hidden text-sm font-medium">
+                    Disconnect
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  connectWallet();
+                  if (onClose) onClose();
+                }}
+                className="group flex items-center gap-3 p-2 rounded-lg border border-[var(--border-color)] hover:bg-[var(--hover-bg)] transition-colors"
+              >
+                <div className="min-w-[24px] flex justify-center">
+                  <User size={20} />
+                </div>
+                <span className="whitespace-nowrap overflow-hidden text-sm font-medium">
+                  Connect Wallet
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Shared Tooltip */}
