@@ -89,19 +89,30 @@ Contributions are what make the open source community such an amazing place to l
 ## 🌟 Top Contributors
 
 <div align="center">
-  <a href="https://github.com/SimpleCyber/NomiNomi/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=SimpleCyber/NomiNomi" alt="Contributors" />
-  </a>
+  <table>
+    <tr>
+      <td align="center">
+        <a href="https://github.com/SimpleCyber">
+          <img src="https://github.com/user-attachments/assets/79d2a91b-b1ad-4704-85fe-e02cac53f122" width="100px;" style="border-radius:50%" alt="Satyam Yadav"/><br />
+          <sub><b>Satyam Yadav</b></sub>
+        </a>
+      </td>
+      <td align="center">
+        <a href="https://github.com/rishabh-kukdeja">
+          <img src="https://github.com/user-attachments/assets/827620a6-49c9-44f0-a2e8-b195f98a71ca" width="100px;" style="border-radius:50%" alt="Rishabh Kukdeja"/><br />
+          <sub><b>Rishabh Kukdeja</b></sub>
+        </a>
+      </td>
+      <td align="center">
+        <a href="https://github.com/dhruvpal102005">
+          <img src="https://github.com/user-attachments/assets/158ac602-79c0-473f-974f-76316d72d661" width="100px;" style="border-radius:50%" alt="Dhruv"/><br />
+          <sub><b>Dhruv</b></sub>
+        </a>
+      </td>
+    </tr>
+  </table>
 </div>
-<img src="https://github.com/user-attachments/assets/79d2a91b-b1ad-4704-85fe-e02cac53f122"/>
-<img src="https://github.com/user-attachments/assets/158ac602-79c0-473f-974f-76316d72d661"/>
-<img src="https://github.com/user-attachments/assets/827620a6-49c9-44f0-a2e8-b195f98a71ca"/>
-@SimpleCyber
-SimpleCyber Satyam Yadav
-@rishabh-kukdeja
-rishabh-kukdeja Rishabh Kukdeja
-@dhruvpal102005
-dhruvpal102005 Dhruv
+
 ---
 
 <div align="center">
