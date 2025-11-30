@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.pinimg.com",
       },
+      {
+        protocol: "https",
+        hostname: "i0.wp.com", // <-- REQUIRED for your GIF
+      },
     ],
   },
 };
