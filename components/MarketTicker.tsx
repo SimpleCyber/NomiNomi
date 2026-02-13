@@ -5,7 +5,14 @@ import { useState, useEffect } from "react";
 import { Market } from "@/data/constants";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
 import Link from "next/link";
 
 export default function MarketTicker() {
@@ -22,38 +29,48 @@ export default function MarketTicker() {
         const q = query(
           collection(db, "memecoins"),
           orderBy("createdAt", "desc"),
-          limit(50)
+          limit(50),
         );
         const querySnapshot = await getDocs(q);
 
-        const fetchedMarkets: Market[] = querySnapshot.docs.map(doc => {
+        const fetchedMarkets: Market[] = querySnapshot.docs.map((doc) => {
           const data = doc.data();
 
           // Calculate age
           let age = "New";
           if (data.createdAt) {
-            const createdAt = data.createdAt instanceof Timestamp
-              ? data.createdAt.toDate()
-              : new Date(data.createdAt);
-            const diffInSeconds = Math.floor((new Date().getTime() - createdAt.getTime()) / 1000);
+            const createdAt =
+              data.createdAt instanceof Timestamp
+                ? data.createdAt.toDate()
+                : new Date(data.createdAt);
+            const diffInSeconds = Math.floor(
+              (new Date().getTime() - createdAt.getTime()) / 1000,
+            );
 
             if (diffInSeconds < 60) age = `${diffInSeconds}s`;
-            else if (diffInSeconds < 3600) age = `${Math.floor(diffInSeconds / 60)}m`;
-            else if (diffInSeconds < 86400) age = `${Math.floor(diffInSeconds / 3600)}h`;
+            else if (diffInSeconds < 3600)
+              age = `${Math.floor(diffInSeconds / 60)}m`;
+            else if (diffInSeconds < 86400)
+              age = `${Math.floor(diffInSeconds / 3600)}h`;
             else age = `${Math.floor(diffInSeconds / 86400)}d`;
           }
 
           // Format Market Cap
-          const marketCap = data.marketCap 
-             ? (typeof data.marketCap === 'number' ? `${data.marketCap.toFixed(2)} ADA` : data.marketCap)
-             : "$0";
+          const marketCap = data.marketCap
+            ? typeof data.marketCap === "number"
+              ? `${data.marketCap.toFixed(2)} ADA`
+              : data.marketCap
+            : "$0";
 
           return {
             id: doc.id,
             name: data.name || "Unknown",
             symbol: data.symbol || "UNK",
             price: data.price || "$0.00",
-            volume: data.volume ? `${data.volume.toFixed(2)} ADA` : "$0",
+            volume:
+              typeof data.volume === "number"
+                ? `${data.volume.toFixed(2)} ADA`
+                : data.volume || "$0",
             marketCap: marketCap,
             change: data.change || "0%",
             change5m: data.change5m || "0%",
@@ -72,6 +89,22 @@ export default function MarketTicker() {
           };
         });
 
+        // Sort: Images first, then by createdAt (implied by query order, but we re-sort to be safe)
+        fetchedMarkets.sort((a, b) => {
+          const aHasImage =
+            a.image &&
+            a.image !== "/placeholder.png" &&
+            !a.image.includes("placeholder");
+          const bHasImage =
+            b.image &&
+            b.image !== "/placeholder.png" &&
+            !b.image.includes("placeholder");
+
+          if (aHasImage && !bHasImage) return -1;
+          if (!aHasImage && bHasImage) return 1;
+          return 0; // Maintain existing order (createdAt)
+        });
+
         setMarkets(fetchedMarkets);
       } catch (error) {
         console.error("Error fetching markets:", error);
@@ -87,12 +120,12 @@ export default function MarketTicker() {
   const totalPages = Math.ceil(markets.length / ITEMS_PER_PAGE);
   const paginatedMarkets = markets.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -103,10 +136,11 @@ export default function MarketTicker() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === tab
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === tab
                   ? "bg-black/5 dark:bg-white/10 text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:text-blue-500"
-                }`}
+              }`}
             >
               {tab}
             </button>
@@ -116,19 +150,21 @@ export default function MarketTicker() {
         <div className="flex items-center bg-[var(--card-bg)] rounded-lg p-1 border border-[var(--border-color)]">
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md transition-colors ${viewMode === "list"
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === "list"
                 ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
+            }`}
           >
             <List size={18} />
           </button>
           <button
             onClick={() => setViewMode("cards")}
-            className={`p-2 rounded-md transition-colors ${viewMode === "cards"
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === "cards"
                 ? "bg-[var(--input-bg)] text-[var(--foreground)] shadow-sm"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
+            }`}
           >
             <LayoutGrid size={18} />
           </button>
@@ -169,9 +205,15 @@ export default function MarketTicker() {
                       <th className="pb-4 font-medium text-right uppercase">
                         Traders
                       </th>
-                      <th className="pb-4 font-medium text-right uppercase">5M</th>
-                      <th className="pb-4 font-medium text-right uppercase">1H</th>
-                      <th className="pb-4 font-medium text-right uppercase">6H</th>
+                      <th className="pb-4 font-medium text-right uppercase">
+                        5M
+                      </th>
+                      <th className="pb-4 font-medium text-right uppercase">
+                        1H
+                      </th>
+                      <th className="pb-4 font-medium text-right uppercase">
+                        6H
+                      </th>
                       <th className="pb-4 font-medium text-right pr-4 uppercase">
                         24H
                       </th>
@@ -184,7 +226,10 @@ export default function MarketTicker() {
                         className="border-b border-[var(--border-color)] last:border-none hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer h-16"
                       >
                         <td className="pl-4">
-                          <Link href={`/token/${market.id}`} className="flex items-center gap-3 w-full h-full">
+                          <Link
+                            href={`/token/${market.id}`}
+                            className="flex items-center gap-3 w-full h-full"
+                          >
                             <span className="text-[var(--muted)] text-sm w-4">
                               #{index + 1 + (currentPage - 1) * ITEMS_PER_PAGE}
                             </span>
@@ -195,8 +240,9 @@ export default function MarketTicker() {
                                 alt={market.symbol}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  e.currentTarget.parentElement!.innerText = market.symbol[0];
+                                  e.currentTarget.style.display = "none";
+                                  e.currentTarget.parentElement!.innerText =
+                                    market.symbol[0];
                                 }}
                               />
                             </div>
@@ -230,7 +276,7 @@ export default function MarketTicker() {
                               ></div>
                             </div>
                             <span className="text-sm font-medium text-[var(--foreground)]">
-                               {market.bondingCurve.toFixed(2)}%
+                              {market.bondingCurve.toFixed(2)}%
                             </span>
                           </div>
                         </td>
@@ -289,8 +335,12 @@ export default function MarketTicker() {
                         alt={market.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement?.classList.add(
+                            "flex",
+                            "items-center",
+                            "justify-center",
+                          );
                           e.currentTarget.parentElement!.innerHTML = `<span class="text-4xl font-bold text-[var(--foreground)]">${market.symbol[0]}</span>`;
                         }}
                       />
@@ -316,7 +366,9 @@ export default function MarketTicker() {
                           <span className="text-[8px]">👤</span>
                         </div>
                         <span className="truncate">
-                          {market.creatorAddress ? `Created by ${market.creatorAddress.slice(0, 4)}...${market.creatorAddress.slice(-4)}` : "Created by Dev"}
+                          {market.creatorAddress
+                            ? `Created by ${market.creatorAddress.slice(0, 4)}...${market.creatorAddress.slice(-4)}`
+                            : "Created by Dev"}
                         </span>
                         <span>•</span>
                         <span>{market.age} ago</span>
@@ -326,7 +378,9 @@ export default function MarketTicker() {
                       <div className="mb-1">
                         <div className="flex items-center gap-2 text-xs mb-1">
                           <span className="text-[var(--muted)]">MC</span>
-                          <span className="font-bold text-[var(--foreground)]">{market.marketCap}</span>
+                          <span className="font-bold text-[var(--foreground)]">
+                            {market.marketCap}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-[var(--input-bg)] rounded-full overflow-hidden">
@@ -335,7 +389,9 @@ export default function MarketTicker() {
                               style={{ width: `${market.bondingCurve}%` }}
                             ></div>
                           </div>
-                          <span className={`text-xs font-medium ${market.isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                          <span
+                            className={`text-xs font-medium ${market.isPositive ? "text-emerald-500" : "text-red-500"}`}
+                          >
                             {market.bondingCurve.toFixed(2)}%
                           </span>
                         </div>
@@ -344,7 +400,8 @@ export default function MarketTicker() {
 
                     {/* Description */}
                     <p className="text-xs text-[var(--muted)] line-clamp-2 mt-1">
-                      {market.description || `${market.name} is a community driven project on Cardano. Join the movement!`}
+                      {market.description ||
+                        `${market.name} is a community driven project on Cardano. Join the movement!`}
                     </p>
                   </div>
                 </Link>
@@ -362,25 +419,29 @@ export default function MarketTicker() {
               >
                 Previous
               </button>
-              
+
               <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium transition-colors ${
-                      currentPage === page
-                        ? "bg-blue-500 text-white"
-                        : "bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--foreground)] hover:bg-[var(--input-bg)]"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? "bg-blue-500 text-white"
+                          : "bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--foreground)] hover:bg-[var(--input-bg)]"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
               </div>
 
               <button
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                onClick={() =>
+                  handlePageChange(Math.min(totalPages, currentPage + 1))
+                }
                 disabled={currentPage === totalPages}
                 className="px-3 py-1 rounded-md bg-[var(--card-bg)] border border-[var(--border-color)] text-[var(--foreground)] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--input-bg)] transition-colors"
               >
