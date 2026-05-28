@@ -94,7 +94,8 @@ export const MARKETS: Market[] = [
     txns: 57,
     traders: 4,
     image: "/santa.png",
-    description: "HAPPYSANTA is a community driven project on Cardano. Join the movement!",
+    description:
+      "HAPPYSANTA is a community driven project on Cardano. Join the movement!",
   },
   {
     id: 2,
@@ -115,7 +116,8 @@ export const MARKETS: Market[] = [
     txns: 159,
     traders: 106,
     image: "/butterjak.png",
-    description: "butterjak is a community driven project on Cardano. Join the movement!",
+    description:
+      "butterjak is a community driven project on Cardano. Join the movement!",
   },
   {
     id: 3,
@@ -136,7 +138,8 @@ export const MARKETS: Market[] = [
     txns: 789,
     traders: 296,
     image: "/spiderkid.png",
-    description: "The Spiderkid is a community driven project on Cardano. Join the movement!",
+    description:
+      "The Spiderkid is a community driven project on Cardano. Join the movement!",
   },
   {
     id: 4,
@@ -157,7 +160,8 @@ export const MARKETS: Market[] = [
     txns: 3840,
     traders: 1006,
     image: "/portal.png",
-    description: "Perillius Portal is a community driven project on Cardano. Join the movement!",
+    description:
+      "Perillius Portal is a community driven project on Cardano. Join the movement!",
   },
   {
     id: 5,
@@ -178,7 +182,8 @@ export const MARKETS: Market[] = [
     txns: 59,
     traders: 5,
     image: "/stranger.png",
-    description: "Stranger Things is a community driven project on Cardano. Join the movement!",
+    description:
+      "Stranger Things is a community driven project on Cardano. Join the movement!",
   },
   {
     id: 6,
@@ -199,7 +204,8 @@ export const MARKETS: Market[] = [
     txns: 10348,
     traders: 2537,
     image: "/wojak.png",
-    description: "Phone Wojak is a community driven project on Cardano. Join the movement!",
+    description:
+      "Phone Wojak is a community driven project on Cardano. Join the movement!",
   },
   {
     id: 7,
@@ -220,7 +226,8 @@ export const MARKETS: Market[] = [
     txns: 1522,
     traders: 363,
     image: "/anna.png",
-    description: "Anna is a community driven project on Cardano. Join the movement!",
+    description:
+      "Anna is a community driven project on Cardano. Join the movement!",
   },
 ];
 
@@ -231,11 +238,10 @@ export const MENU_ITEMS: MenuItem[] = [
   { name: "Swap Coins", icon: RefreshCcw, href: "/swap" },
   { name: "My Profile", icon: User, href: "/profile" },
   { name: "Create coin", icon: PlusCircle, href: "/createcoin" },
-  
 ];
 
 export const BOTTOM_MENU_ITEMS: MenuItem[] = [
-    { name: "Have Fun", icon: HandMetal, href: "/fun" },
+  { name: "Have NFT", icon: HandMetal, href: "/fun" },
   { name: "Support", icon: HelpCircle, href: "/support" },
 ];
 
