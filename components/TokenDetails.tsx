@@ -12,6 +12,7 @@ import PriceChart from "./PriceChart";
 import CandleChart from "./CandleChart";
 import { toast } from "sonner";
 import { getTokenMetadata } from "@solana/spl-token";
+import { useNetwork } from "@/context/NetworkContext";
 
 interface Comment {
   id: string;
@@ -31,6 +32,7 @@ interface Trade {
 }
 
 export default function TokenDetails({ tokenId }: { tokenId: string }) {
+  const { isDevnet } = useNetwork();
   const [token, setToken] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [buyAmount, setBuyAmount] = useState("");
@@ -497,6 +499,18 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                   <Activity size={10} />
                   On-Chain Verified
                 </span>
+              )}
+              {token.mintAddress && (
+                <a
+                  href={`https://explorer.solana.com/address/${token.mintAddress}${isDevnet ? "?cluster=devnet" : ""}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 flex items-center gap-1 text-[10px] font-bold text-[var(--muted)] hover:text-blue-500 transition-colors px-1.5 py-0.5 rounded-md hover:bg-blue-500/10 border border-[var(--border-color)] hover:border-blue-500/20"
+                  title="View on Solana Explorer"
+                >
+                  <svg viewBox="0 0 397.7 311.7" className="w-3 h-3" fill="currentColor"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+                  Explorer
+                </a>
               )}
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--muted)] mb-3">
