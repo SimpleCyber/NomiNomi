@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { db } from "../lib/firebase";
-import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit, updateDoc, increment, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit, updateDoc, increment, setDoc, where } from "firebase/firestore";
 import { useWallet } from "../context/WalletContext";
 import { PublicKey } from "@solana/web3.js";
 import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw, BarChart2, LineChart, Activity } from "lucide-react";
@@ -70,15 +70,20 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   }, [tokenId, walletAddress, isConnected]);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "memecoins", tokenId), async (docSnap) => {
-      if (docSnap.exists()) {
+    const isMintAddress = tokenId && tokenId.length > 30; // Solana addresses are ~44 chars
+
+    const queryOrDoc = isMintAddress
+      ? query(collection(db, "memecoins"), where("mintAddress", "==", tokenId), limit(1))
+      : doc(db, "memecoins", tokenId);
+
+    const processDoc = async (docSnap: any) => {
         const data = docSnap.data();
         let finalData: any = { id: docSnap.id, ...data };
         
         // --- On-Chain Fetching ---
-        if (data.mintAddress) {
+        if (data.mintAddress || isMintAddress) {
           try {
-            const mintPublicKey = new PublicKey(data.mintAddress);
+            const mintPublicKey = new PublicKey(data.mintAddress || tokenId);
             const metadata = await getTokenMetadata(connection, mintPublicKey);
             
             if (metadata) {
@@ -102,12 +107,30 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
         }
         
         setToken(finalData);
+        setLoading(false);
+    };
+
+    const unsub = onSnapshot(queryOrDoc as any, (snap: any) => {
+      // If it's a query snapshot (mintAddress mode)
+      if (isMintAddress) {
+        if (!snap.empty) {
+          processDoc(snap.docs[0]);
+        } else {
+          setLoading(false);
+        }
+      } else {
+        // If it's a document snapshot (standard mode)
+        if (snap.exists()) {
+          processDoc(snap);
+        } else {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     });
 
     return () => unsub();
   }, [tokenId, connection]);
+
 
   // Fetch Comments
   useEffect(() => {
