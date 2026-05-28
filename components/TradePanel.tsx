@@ -49,7 +49,7 @@ export default function TradePanel({ coinSymbol, coinName, coinImage }: TradePan
             <div className="p-4 space-y-4">
                 <div className="space-y-2">
                     <div className="flex justify-between text-xs text-gray-400">
-                        <span>Amount ({mode === "buy" ? "ADA" : coinSymbol})</span>
+                        <span>Amount ({mode === "buy" ? "SOL" : coinSymbol})</span>
                         <span>Balance: 0.00</span>
                     </div>
                     <div className="relative">
@@ -61,7 +61,7 @@ export default function TradePanel({ coinSymbol, coinName, coinImage }: TradePan
                             placeholder="0.00"
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500 bg-gray-800 px-2 py-1 rounded">
-                            {mode === "buy" ? "ADA" : coinSymbol}
+                            {mode === "buy" ? "SOL" : coinSymbol}
                         </div>
                     </div>
                 </div>
@@ -74,7 +74,7 @@ export default function TradePanel({ coinSymbol, coinName, coinImage }: TradePan
                             onClick={() => setAmount(val)}
                             className="flex-1 bg-[#1a1b1f] hover:bg-gray-700 border border-gray-700 rounded py-1 text-xs text-gray-300 transition-colors"
                         >
-                            {val} {mode === "buy" ? "ADA" : "%"}
+                            {val} {mode === "buy" ? "SOL" : "%"}
                         </button>
                     ))}
                 </div>
@@ -83,7 +83,7 @@ export default function TradePanel({ coinSymbol, coinName, coinImage }: TradePan
                 <div className="bg-[#1a1b1f] rounded-lg p-3 space-y-2 text-xs">
                     <div className="flex justify-between text-gray-400">
                         <span>You receive</span>
-                        <span className="text-white font-bold">0.00 {mode === "buy" ? coinSymbol : "ADA"}</span>
+                        <span className="text-white font-bold">0.00 {mode === "buy" ? coinSymbol : "SOL"}</span>
                     </div>
                     <div className="flex justify-between text-gray-400">
                         <span>Price impact</span>

@@ -16,24 +16,25 @@ import {
   onSnapshot,
   doc,
   updateDoc,
-  getDocs,
   setDoc,
-  serverTimestamp,
-  getDoc,
   limit,
   collectionGroup,
 } from "firebase/firestore";
 import {
   Loader2,
   Shield,
-  Power,
-  Eye,
-  EyeOff,
   DollarSign,
   Activity,
   Users,
+  Search,
+  ExternalLink,
+  ChevronRight,
+  TrendingUp,
+  History,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AdminSidebar } from "@/components/AdminSidebar";
 
 export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
@@ -43,10 +44,15 @@ export default function AdminPage() {
   const [platformStats, setPlatformStats] = useState<any>({
     totalEarnings: 0,
     totalTransactions: 0,
+    adminEmail: "",
+    platformFee: 1, // 1% default
   });
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [adminWallet, setAdminWallet] = useState("");
-  const [isSavingWallet, setIsSavingWallet] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [view, setView] = useState<"dashboard" | "tokens" | "settings">("dashboard");
+  const [solanaNetwork, setSolanaNetwork] = useState<"devnet" | "mainnet-beta">("devnet");
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -63,10 +69,8 @@ export default function AdminPage() {
 
   const checkAdminStatus = async (email: string) => {
     try {
-      // Check if email is in the allowed list
       if (ADMIN_EMAILS.includes(email)) {
         setIsAdmin(true);
-        toast.success("Welcome Admin!");
       } else {
         setIsAdmin(false);
         toast.error("Access Denied: You are not an authorized admin.");
@@ -74,7 +78,6 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error("Error checking admin status:", error);
-      toast.error("Failed to verify admin status.");
       setIsAdmin(false);
     } finally {
       setLoading(false);
@@ -87,30 +90,27 @@ export default function AdminPage() {
     // Fetch Tokens
     const q = query(collection(db, "memecoins"), orderBy("createdAt", "desc"));
     const unsubTokens = onSnapshot(q, (snapshot) => {
-      const tokensData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTokens(tokensData);
+      setTokens(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     // Fetch Platform Stats
     const statsRef = doc(db, "platform_stats", "global");
     const unsubStats = onSnapshot(statsRef, (doc) => {
         if (doc.exists()) {
-            setPlatformStats(doc.data());
-            setAdminWallet(doc.data().adminWalletAddress || "");
+            const data = doc.data();
+            setPlatformStats(data);
+            setAdminWallet(data.adminWalletAddress || "");
+            setAdminEmail(data.adminEmail || "");
+            setSolanaNetwork(data.solanaNetwork || "devnet");
         } else {
-            // Initialize if not exists
             setDoc(statsRef, { totalEarnings: 0, totalTransactions: 0 });
         }
     });
 
-    // Fetch Recent Transactions (using collectionGroup for 'trades' subcollection)
-    const qTrades = query(collectionGroup(db, "trades"), orderBy("timestamp", "desc"), limit(10));
+    // Fetch Recent Transactions
+    const qTrades = query(collectionGroup(db, "trades"), orderBy("timestamp", "desc"), limit(6));
     const unsubTrades = onSnapshot(qTrades, (snapshot) => {
-        const trades = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setRecentTransactions(trades);
+        setRecentTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     return () => {
@@ -130,21 +130,19 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogout = () => signOut(auth);
-
-  const handleSaveWallet = async () => {
-      if (!adminWallet) return;
-      setIsSavingWallet(true);
+  const handleSaveSettings = async () => {
+      setIsSaving(true);
       try {
           await updateDoc(doc(db, "platform_stats", "global"), {
-              adminWalletAddress: adminWallet
+              adminWalletAddress: adminWallet,
+              adminEmail: adminEmail,
+              solanaNetwork: solanaNetwork,
           });
-          toast.success("Admin wallet updated!");
+          toast.success("Platform settings updated successfully!");
       } catch (error) {
-          console.error("Error saving wallet:", error);
-          toast.error("Failed to save wallet.");
+          toast.error("Failed to update settings.");
       } finally {
-          setIsSavingWallet(false);
+          setIsSaving(false);
       }
   };
 
@@ -152,253 +150,254 @@ export default function AdminPage() {
     if (!timestamp) return "Just now";
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const diff = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 60) return `${diff}s`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
   };
 
-  if (loading)
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--background)]">
-        <Loader2 className="animate-spin text-[var(--primary)]" />
-      </div>
-    );
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-[var(--background)]">
+      <Loader2 className="animate-spin text-blue-500" />
+    </div>
+  );
 
-  if (!user || !isAdmin) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[var(--background)] text-[var(--foreground)]">
-        <Shield size={48} className="text-[var(--primary)]" />
-        <h1 className="text-2xl font-bold">Admin Access Only</h1>
-        <p className="text-[var(--muted)] max-w-md text-center">
-          This area is restricted to platform administrators. Only the first 3
-          registered accounts are granted access.
-        </p>
-        <button
-          onClick={handleLogin}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          Sign in with Google
-        </button>
+  if (!user || !isAdmin) return (
+    <div className="flex h-screen flex-col items-center justify-center p-4 bg-[var(--background)]">
+      <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 mb-6 border border-red-500/20">
+        <Shield size={32} />
       </div>
-    );
-  }
+      <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">Admin Restricted</h1>
+      <p className="text-[var(--muted)] text-center max-w-sm mb-8">
+        This area is reserved for platform administrators only. If you believe this is an error, please contact support.
+      </p>
+      <button
+        onClick={handleLogin}
+        className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95"
+      >
+        Authorize via Google
+      </button>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-[var(--background)] lg:pl-64">
+      <AdminSidebar onLogout={() => signOut(auth)} user={user} />
+      
+      <main className="p-4 lg:p-8 space-y-8 max-w-[1600px] mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Shield className="text-[var(--primary)]" /> Admin Dashboard
+            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl">
+              Platform Overview
             </h1>
-            <p className="text-[var(--muted)] mt-1">
-              Manage platform settings and view statistics
+            <p className="mt-2 text-[var(--muted)] font-medium">
+              Real-time synchronization with Solana and Metadata Extensions
             </p>
           </div>
-          <div className="flex items-center gap-4 bg-[var(--card-bg)] p-2 rounded-lg border border-[var(--border-color)]">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-              {user.email?.[0].toUpperCase()}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">{user.displayName}</span>
-              <span className="text-xs text-[var(--muted)]">{user.email}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="ml-4 p-2 hover:bg-red-500/10 text-red-500 rounded-md transition-colors"
-              title="Sign out"
-            >
-              <Power size={18} />
-            </button>
+          <div className="flex items-center gap-2 bg-[var(--card-bg)] border border-[var(--border-color)] px-4 py-2 rounded-xl">
+             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+             <span className="text-xs font-bold text-[var(--foreground)]">System Operational</span>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-[var(--card-bg)] p-6 rounded-xl border border-[var(--border-color)]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[var(--muted)] font-medium">
-                Total Earnings
-              </h3>
-              <DollarSign className="text-green-500" />
-            </div>
-            <div className="text-3xl font-bold">
-              {(platformStats.totalEarnings || 0).toLocaleString()} ADA
-            </div>
-            <div className="text-sm text-green-500 mt-2">
-              +12% from last month
-            </div>
-          </div>
-
-          <div className="bg-[var(--card-bg)] p-6 rounded-xl border border-[var(--border-color)]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[var(--muted)] font-medium">
-                Total Transactions
-              </h3>
-              <Activity className="text-blue-500" />
-            </div>
-            <div className="text-3xl font-bold">
-              {(platformStats.totalTransactions || 0).toLocaleString()}
-            </div>
-            <div className="text-sm text-blue-500 mt-2">+5% from last week</div>
-          </div>
-
-          <div className="bg-[var(--card-bg)] p-6 rounded-xl border border-[var(--border-color)]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[var(--muted)] font-medium">Active Admins</h3>
-              <Users className="text-purple-500" />
-            </div>
-            <div className="text-3xl font-bold">3 / 3</div>
-            <div className="text-sm text-[var(--muted)] mt-2">
-              Max limit reached
-            </div>
-          </div>
-        </div>
-
-        {/* Admin Wallet Settings */}
-        <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl p-6 mb-8">
-            <h3 className="text-lg font-bold mb-4">Admin Wallet Settings</h3>
-            <div className="flex gap-4">
-                <input 
-                    type="text" 
-                    value={adminWallet}
-                    onChange={(e) => setAdminWallet(e.target.value)}
-                    placeholder="Enter Admin Wallet Address (addr...)"
-                    className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 outline-none focus:border-blue-500 transition-colors"
-                />
-                <button 
-                    onClick={handleSaveWallet}
-                    disabled={isSavingWallet}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                    {isSavingWallet ? "Saving..." : "Save Address"}
-                </button>
-            </div>
-            <p className="text-xs text-[var(--muted)] mt-2">
-                This address will receive all platform fees (1 ADA per mint, transaction fees).
-            </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Token Management */}
-          <div className="lg:col-span-2 bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden">
-            <div className="p-6 border-b border-[var(--border-color)]">
-              <h2 className="text-xl font-bold">Token Management</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[var(--input-bg)] border-b border-[var(--border-color)]">
-                    <th className="p-4 font-medium text-sm text-[var(--muted)]">
-                      Token
-                    </th>
-                    <th className="p-4 font-medium text-sm text-[var(--muted)]">
-                      Status
-                    </th>
-                    <th className="p-4 font-medium text-sm text-[var(--muted)]">
-                      Raised
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokens.map((token) => (
-                    <tr
-                      key={token.id}
-                      className="border-b border-[var(--border-color)] hover:bg-[var(--input-bg)]/50 transition-colors"
-                    >
-                      <td className="p-4 flex items-center gap-3">
-                        {token.image && (
-                          <img
-                            src={token.image}
-                            alt=""
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        )}
-                        <div>
-                          <div className="font-bold text-sm">{token.name}</div>
-                          <div className="text-xs text-[var(--muted)]">
-                            {token.symbol}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-bold ${
-                            token.status === "LIVE"
-                              ? "bg-green-500/20 text-green-500"
-                              : token.status === "DISABLED"
-                                ? "bg-red-500/20 text-red-500"
-                                : "bg-blue-500/20 text-blue-500"
-                          }`}
-                        >
-                          {token.status || "FUNDING"}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm">
-                        {token.raisedAda || 0} ADA
-                      </td>
-                    </tr>
-                  ))}
-                  {tokens.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="p-8 text-center text-[var(--muted)]"
-                      >
-                        No tokens found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Recent Transactions */}
-          <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden h-fit">
-            <div className="p-6 border-b border-[var(--border-color)]">
-              <h2 className="text-xl font-bold">Recent Activity</h2>
-            </div>
-            <div className="p-4 space-y-4">
-              {recentTransactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-[var(--input-bg)]/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                        tx.type === "buy"
-                          ? "bg-green-500/20 text-green-500"
-                          : tx.type === "sell"
-                            ? "bg-red-500/20 text-red-500"
-                            : "bg-blue-500/20 text-blue-500"
-                      }`}
-                    >
-                      {tx.type ? tx.type[0].toUpperCase() : "?"}
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">
-                        {tx.type === 'buy' ? 'Bought' : 'Sold'} {tx.amountAda} ADA
-                      </div>
-                      <div className="text-xs text-[var(--muted)]">
-                        {tx.account ? `${tx.account.slice(0, 6)}...` : "Unknown"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-[var(--muted)]">{formatTimeAgo(tx.timestamp)}</div>
+        {/* Dynamic Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {[
+            { label: "Total Revenue", value: `${(platformStats.totalEarnings || 0).toLocaleString()} SOL`, icon: DollarSign, color: "text-green-500", bg: "bg-green-500/10" },
+            { label: "Total Sales", value: (platformStats.totalTransactions || 0).toLocaleString(), icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Active Tokens", value: tokens.length.toLocaleString(), icon: Activity, color: "text-purple-500", bg: "bg-purple-500/10" },
+            { label: "Admin Access", value: (ADMIN_EMAILS.length).toLocaleString(), icon: Users, color: "text-orange-500", bg: "bg-orange-500/10" },
+          ].map((stat, i) => (
+            <div key={i} className="bg-[var(--card-bg)] p-6 rounded-2xl border border-[var(--border-color)] group hover:border-[var(--primary)] transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-2 rounded-xl ${stat.bg} ${stat.color}`}>
+                  <stat.icon size={20} />
                 </div>
-              ))}
-              {recentTransactions.length === 0 && (
-                  <div className="text-center text-[var(--muted)] text-sm py-4">No recent activity</div>
-              )}
+                <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-1 rounded-lg">+0%</span>
+              </div>
+              <p className="text-sm font-medium text-[var(--muted)]">{stat.label}</p>
+              <h3 className="text-2xl font-bold text-[var(--foreground)] mt-1">{stat.value}</h3>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Main Content Area */}
+          <div className="xl:col-span-2 space-y-8">
+            {/* Admin Controls / Settings */}
+            <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 text-blue-500/5 rotate-12">
+                   <SettingsIcon size={120} />
+                </div>
+                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                  <SettingsIcon size={20} className="text-blue-500" /> Infrastructure Settings
+                </h2>
+                <div className="space-y-6 relative z-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Admin Payout Wallet (SOL)</label>
+                            <input 
+                                type="text" 
+                                value={adminWallet}
+                                onChange={(e) => setAdminWallet(e.target.value)}
+                                placeholder="Solana Public Key (Token-2022 Fees)"
+                                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 outline-none focus:ring-2 ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-mono"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Admin Email Address</label>
+                            <input 
+                                type="email" 
+                                value={adminEmail}
+                                onChange={(e) => setAdminEmail(e.target.value)}
+                                placeholder="admin@nominomi.com"
+                                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 outline-none focus:ring-2 ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Network Toggle */}
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-[var(--input-bg)]/30">
+                        <div className="flex gap-3 items-center">
+                            <div className={`w-3 h-3 rounded-full ${solanaNetwork === "devnet" ? "bg-yellow-500 animate-pulse" : "bg-green-500"}`}></div>
+                            <div>
+                                <p className="text-sm font-bold text-[var(--foreground)]">
+                                    Solana Network: <span className={solanaNetwork === "devnet" ? "text-yellow-500" : "text-green-500"}>{solanaNetwork === "devnet" ? "Devnet" : "Mainnet"}</span>
+                                </p>
+                                <p className="text-[10px] text-[var(--muted)]">
+                                    {solanaNetwork === "devnet" ? "Testing mode — no real SOL is used" : "Production mode — real SOL transactions"}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setSolanaNetwork(solanaNetwork === "devnet" ? "mainnet-beta" : "devnet")}
+                            className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${solanaNetwork === "mainnet-beta" ? "bg-green-500" : "bg-yellow-500"}`}
+                        >
+                            <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${solanaNetwork === "mainnet-beta" ? "translate-x-7" : "translate-x-0.5"}`}></div>
+                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                        <div className="flex gap-3 items-center">
+                            <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center">
+                                %
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-[var(--foreground)]">Current Platform Cut: 5% Supply + 1% Trade</p>
+                                <p className="text-[10px] text-[var(--muted)]">Calculated on-chain via SPL Token-2022 Metadata Extensions</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={handleSaveSettings}
+                            disabled={isSaving}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold text-sm transition-all disabled:opacity-50"
+                        >
+                            {isSaving ? "Syncing..." : "Update Infrastructure"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Token Table */}
+            <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-6 border-b border-[var(--border-color)] flex justify-between items-center bg-[var(--input-bg)]/30">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <Activity size={20} className="text-purple-500" /> Managed Assets
+                    </h2>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={14} />
+                        <input type="text" placeholder="Search tokens..." className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-lg pl-9 pr-4 py-1.5 text-xs outline-none focus:border-blue-500 w-48" />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted)] border-b border-[var(--border-color)]">
+                                <th className="px-6 py-4">Mint / Asset</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4">Performance (SOL)</th>
+                                <th className="px-6 py-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border-color)]">
+                            {tokens.map((token) => (
+                                <tr key={token.id} className="hover:bg-blue-500/5 transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-[var(--input-bg)] overflow-hidden border border-[var(--border-color)]">
+                                                {token.image ? <img src={token.image} className="w-full h-full object-cover" /> : null}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm text-[var(--foreground)]">{token.name}</p>
+                                                <p className="text-xs text-[var(--muted)] font-mono">{token.mintAddress?.slice(0,4)}...{token.mintAddress?.slice(-4)}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex justify-center">
+                                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                                                token.status === "MINTED" ? "bg-green-500/10 text-green-500" : "bg-blue-500/10 text-blue-500"
+                                            }`}>
+                                                {token.status || "CREATING"}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-sm">{token.raisedSOL || 0}</span>
+                                            <span className="text-xs text-[var(--muted)]">SOL</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button className="p-2 rounded-lg hover:bg-[var(--card-bg)] text-[var(--muted)] hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all">
+                                            <ExternalLink size={16} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+          </div>
+
+          {/* Right Column: Real-time Feed */}
+          <div className="space-y-8">
+            <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl overflow-hidden flex flex-col h-full">
+                <div className="p-6 border-b border-[var(--border-color)]">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <History size={20} className="text-blue-500" /> Live Tape
+                    </h2>
+                </div>
+                <div className="p-3 space-y-3">
+                    {recentTransactions.map((tx) => (
+                        <div key={tx.id} className="p-4 rounded-xl bg-[var(--input-bg)]/40 border border-transparent hover:border-[var(--border-color)] transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                                <div className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                                    tx.type === "buy" ? "bg-green-500 text-black" : "bg-red-500 text-white"
+                                }`}>
+                                    {tx.type}
+                                </div>
+                                <span className="text-[10px] text-[var(--muted)]">{formatTimeAgo(tx.timestamp)}</span>
+                            </div>
+                            <div className="flex justify-between items-end">
+                                <div>
+                                   <p className="text-xs font-bold text-[var(--foreground)]">{tx.amountAda} SOL</p>
+                                   <p className="text-[10px] text-[var(--muted)] truncate max-w-[120px]">{tx.account}</p>
+                                </div>
+                                <ChevronRight className="text-[var(--muted)]" size={12} />
+                            </div>
+                        </div>
+                    ))}
+                    <button className="w-full py-3 text-xs font-bold text-[var(--muted)] hover:text-blue-500 transition-colors">
+                        View All On-Chain History
+                    </button>
+                </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

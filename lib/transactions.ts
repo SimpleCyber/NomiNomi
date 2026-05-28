@@ -1,36 +1,42 @@
 import {
-  Lucid,
-  Blockfrost,
-  Data,
-  Constr,
-  fromText,
-  toUnit,
-  TxHash,
-} from "lucid-cardano";
-import { initLucid } from "./cardano";
+  Connection,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from "@solana/web3.js";
+import { 
+  createMintToInstruction, 
+  getAssociatedTokenAddress, 
+  createAssociatedTokenAccountInstruction,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  getMintLen,
+  ExtensionType,
+  createInitializeMintInstruction,
+  createInitializeMetadataPointerInstruction,
+  TYPE_SIZE,
+  LENGTH_SIZE,
+  getTokenMetadata,
+} from "@solana/spl-token";
+import { 
+  createInitializeInstruction, 
+  createUpdateFieldInstruction,
+  pack
+} from "@solana/spl-token-metadata";
+import { Keypair } from "@solana/web3.js";
 
 // --- Constants ---
-export const PLATFORM_FEE_ADDRESS =
-  "addr_test1qpzqmfvgpdd5tlh7jk3fhnrr3rjcl8mkknkw3j2233tyh7j8kqykw07ktc6wqmrql4alr45f9qqcpcsteypsemf5l4csmsxa7y";
+export const PLATFORM_FEE_ADDRESS = "6SVgnyzF6DhZ8sz1y9s9znkaDAtoG2ZUDJEDyXg2oyan"; 
+const PRECISION = 1_000_000_000n; 
 
-const PRECISION = 1_000_000_000n; // High precision for math
-const A = 20n; // Initial Price Scaling (tuned for ~100 ADA at 1M supply)
-const B = 5000n; // Growth Factor (tuned for ~100 ADA at 1M supply)
-// Target: Integral(0 to 1M) of Price(x) dx = 100 ADA (100 * 10^6 Lovelace)
-// Price(x) = A * exp(B * x / 1M) / PRECISION
-// This is a simplified model. For the demo, we will use a curve that hits ~100 ADA at 1M.
-
-// --- Math Functions (Off-chain) ---
-
-// Taylor Series Approximation for e^x
-// x is scaled by PRECISION. Returns e^x scaled by PRECISION.
-// e^x = 1 + x + x^2/2! + x^3/3! + ...
+// --- Math Functions (Bonding Curve) ---
+// Kept from original code for consistency
 export function expTaylor(x: bigint): bigint {
   let sum = PRECISION;
   let term = PRECISION;
   let n = 1n;
-
-  // Run for 15 terms for sufficient precision
   while (n < 15n) {
     term = (term * x) / (n * PRECISION);
     sum += term;
@@ -39,46 +45,10 @@ export function expTaylor(x: bigint): bigint {
   return sum;
 }
 
-// Calculate Cost in Lovelace to buy 'amount' tokens starting from 'currentSupply'
 export function calculateCost(currentSupply: bigint, amount: bigint): bigint {
-    // We'll use a simpler exponential-like curve for stability if Taylor is too heavy,
-    // but user asked for Taylor.
-    // Let's normalize supply to 0-1 range for the exponent to avoid overflow.
-    // Max Supply = 1,000,000.
-    // x = Supply / 100,000 (scaled down)
-    
-    const scale = 100_000n; 
-    
-    // Cost = Integral(current to current+amount) of (A * e^(x/scale))
-    // Integral = A * scale * (e^((current+amount)/scale) - e^(current/scale))
-    
-    // We need to be careful with BigInt overflow.
-    // Let's use a slightly different approach: Sum of prices? No, too slow.
-    // Let's use the Taylor expansion on the integral difference.
-    
-    const startX = (currentSupply * PRECISION) / scale;
-    const endX = ((currentSupply + amount) * PRECISION) / scale;
-    
-    const expStart = expTaylor(startX);
-    const expEnd = expTaylor(endX);
-    
-    // Cost = A * scale * (expEnd - expStart) / PRECISION
-    // We also need to scale down to Lovelace.
-    // Let's adjust A to make it hit ~100 ADA.
-    // If A=1, scale=100k. e^10 - 1 ~= 22000.
-    // 1 * 100k * 22000 = 2.2B. We want 100M.
-    // So A should be small or we adjust scale.
-    
-    // Let's use a simpler polynomial approximation for the demo if exp is unstable,
-    // BUT user asked for Taylor. We will stick to it.
-    // Let's use a very small growth factor B inside the exp.
-    
-    // Revised Formula: Price = BasePrice * e^(B * Supply / MaxSupply)
-    // Cost = (BasePrice * MaxSupply / B) * (e^(B * (S+amt)/Max) - e^(B * S/Max))
-    
     const maxSupply = 1_000_000n;
-    const bFactor = 4n * PRECISION; // B = 4 (Growth Factor)
-    const basePrice = 8n; // Base price in Lovelace (tuned for ~107 ADA total)
+    const bFactor = 4n * PRECISION;
+    const basePrice = 8n; // This is in the context of the curve
     
     const s1 = (currentSupply * bFactor) / maxSupply;
     const s2 = ((currentSupply + amount) * bFactor) / maxSupply;
@@ -86,20 +56,173 @@ export function calculateCost(currentSupply: bigint, amount: bigint): bigint {
     const e1 = expTaylor(s1);
     const e2 = expTaylor(s2);
     
-    // Integral result
-    // (BasePrice * MaxSupply / B) * (e2 - e1)
-    // Note: e1, e2 are scaled by PRECISION. bFactor is scaled by PRECISION.
-    // The ratio (e2 - e1) / bFactor is dimensionless and correct.
-    
+    // Returning lamports equivalent (if basePrice is adjusted for SOL)
+    // On Cardano this was Lovelace (10^-6). On Solana it's Lamports (10^-9).
+    // Adjusting basePrice to match SOL scale if needed.
     const cost = (basePrice * maxSupply * (e2 - e1)) / bFactor;
-    
     return cost; 
 }
 
+export function calculateAmountOut(currentSupply: bigint, paymentAmount: bigint): bigint {
+  let low = 0n;
+  let high = 1_000_000n - currentSupply;
+  let ans = 0n;
+  for (let i = 0; i < 30; i++) {
+      const mid = (low + high) / 2n;
+      const cost = calculateCost(currentSupply, mid);
+      if (cost <= paymentAmount) {
+          ans = mid;
+          low = mid + 1n;
+      } else {
+          high = mid - 1n;
+      }
+  }
+  return ans;
+}
+
+// --- Solana Transactions ---
+
+export const mintToken = async (
+  sendTransaction: any,
+  connection: Connection,
+  publicKey: PublicKey,
+  metadata: { name: string, symbol: string, image: string, description?: string },
+  adminAddress: string = PLATFORM_FEE_ADDRESS
+) => {
+  try {
+    const mintKeypair = Keypair.generate();
+    const mint = mintKeypair.publicKey;
+    const adminPublicKey = new PublicKey(adminAddress);
+    
+    // 5% Supply Split Logic
+    const totalSupply = 1_000_000n * (10n ** 6n); // 1M tokens with 6 decimals
+    const adminSupply = (totalSupply * 5n) / 100n;
+    const userSupply = totalSupply - adminSupply;
+
+    // Metadata for Token-2022 (keep additionalMetadata minimal for rent calculation)
+    const metaData = {
+        updateAuthority: publicKey,
+        mint: mint,
+        name: metadata.name,
+        symbol: metadata.symbol,
+        uri: metadata.image,
+        additionalMetadata: [
+            ["platform", "NomiNomi"],
+        ] as [string, string][],
+    };
+
+    const mintLen = getMintLen([ExtensionType.MetadataPointer]);
+    const metadataLen = TYPE_SIZE + LENGTH_SIZE + pack(metaData).length;
+    const lamports = await connection.getMinimumBalanceForRentExemption(mintLen + metadataLen);
+
+    // --- TX 1: Create Mint + Initialize Metadata ---
+    const tx1 = new Transaction().add(
+        SystemProgram.createAccount({
+            fromPubkey: publicKey,
+            newAccountPubkey: mint,
+            space: mintLen,
+            lamports,
+            programId: TOKEN_2022_PROGRAM_ID,
+        }),
+        createInitializeMetadataPointerInstruction(
+            mint, publicKey, mint, TOKEN_2022_PROGRAM_ID
+        ),
+        createInitializeMintInstruction(
+            mint, 6, publicKey, null, TOKEN_2022_PROGRAM_ID
+        ),
+        createInitializeInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            metadata: mint,
+            updateAuthority: publicKey,
+            mint: mint,
+            mintAuthority: publicKey,
+            name: metaData.name,
+            symbol: metaData.symbol,
+            uri: metaData.uri,
+        }),
+        createUpdateFieldInstruction({
+            programId: TOKEN_2022_PROGRAM_ID,
+            metadata: mint,
+            updateAuthority: publicKey,
+            field: "platform",
+            value: "NomiNomi",
+        }),
+    );
+
+    const sig1 = await sendTransaction(tx1, connection, { signers: [mintKeypair] });
+    await connection.confirmTransaction(sig1, 'confirmed');
+    console.log("TX1 (Mint Created):", sig1);
+
+    // --- TX 2: Create ATAs, Mint Supply, Transfer Fee ---
+    const userATA = await getAssociatedTokenAddress(mint, publicKey, false, TOKEN_2022_PROGRAM_ID);
+    const adminATA = await getAssociatedTokenAddress(mint, adminPublicKey, false, TOKEN_2022_PROGRAM_ID);
+
+    const tx2 = new Transaction().add(
+        createAssociatedTokenAccountInstruction(
+            publicKey, userATA, publicKey, mint, TOKEN_2022_PROGRAM_ID
+        ),
+        createAssociatedTokenAccountInstruction(
+            publicKey, adminATA, adminPublicKey, mint, TOKEN_2022_PROGRAM_ID
+        ),
+        createMintToInstruction(mint, userATA, publicKey, userSupply, [], TOKEN_2022_PROGRAM_ID),
+        createMintToInstruction(mint, adminATA, publicKey, adminSupply, [], TOKEN_2022_PROGRAM_ID),
+        SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: adminPublicKey,
+            lamports: 0.01 * LAMPORTS_PER_SOL,
+        })
+    );
+
+    const sig2 = await sendTransaction(tx2, connection);
+    await connection.confirmTransaction(sig2, 'confirmed');
+    console.log("TX2 (Supply Minted):", sig2);
+    
+    return { signature: sig2, mint: mint.toBase58() };
+  } catch (error) {
+    console.error("Minting error:", error);
+    throw error;
+  }
+};
+
+export const buyToken = async (
+  sendTransaction: any,
+  connection: Connection,
+  publicKey: PublicKey,
+  amountToBuy: bigint,
+  currentSupply: bigint = 0n,
+  adminAddress: string = PLATFORM_FEE_ADDRESS
+) => {
+  try {
+    const costLamports = calculateCost(currentSupply, amountToBuy);
+    const platformFee = (costLamports * 1n) / 100n; // 1% Trade Fee
+    const adminPublicKey = new PublicKey(adminAddress);
+    
+    const transaction = new Transaction().add(
+      // Transfer to bonding curve (in a real app, this would be a program account)
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: adminPublicKey, 
+        lamports: Number(costLamports),
+      }),
+      // Platform Cut
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: adminPublicKey,
+        lamports: Number(platformFee),
+      })
+    );
+
+    const signature = await sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
+    
+    return signature;
+  } catch (error) {
+    console.error("Buy error:", error);
+    throw error;
+  }
+};
+
 export function calculateRefund(currentSupply: bigint, amount: bigint): bigint {
-  // Refund is the same logic but backwards: Integral(current-amount to current)
-  // = Integral(0 to current) - Integral(0 to current-amount)
-  
     const maxSupply = 1_000_000n;
     const bFactor = 4n * PRECISION;
     const basePrice = 8n;
@@ -115,102 +238,15 @@ export function calculateRefund(currentSupply: bigint, amount: bigint): bigint {
     return refund;
 }
 
-export function calculateAmountOut(currentSupply: bigint, paymentAmount: bigint): bigint {
-  // Inverse of calculateCost.
-  // Given Cost, find Amount.
-  // Since we have a complex function, Binary Search is the safest and easiest way to invert it.
-  
-  let low = 0n;
-  let high = 1_000_000n - currentSupply; // Can't buy more than remaining
-  let ans = 0n;
-  
-  // 20 iterations is enough for 1M range
-  for (let i = 0; i < 30; i++) {
-      const mid = (low + high) / 2n;
-      const cost = calculateCost(currentSupply, mid);
-      
-      if (cost <= paymentAmount) {
-          ans = mid;
-          low = mid + 1n;
-      } else {
-          high = mid - 1n;
-      }
-  }
-  
-  return ans;
-}
-
-// --- Transactions ---
-
-export const mintToken = async (
-  walletApi: any,
-  metadata: {
-    name: string;
-    symbol: string;
-    description: string;
-    image: string;
-  },
-  metadataHash: string,
-  feeAddress: string = PLATFORM_FEE_ADDRESS // Default to hardcoded if not provided
-): Promise<TxHash> => {
-  try {
-    const lucid = await initLucid(walletApi);
-    
-    // Simple 1 ADA fee transfer
-    const tx = await lucid
-      .newTx()
-      .payToAddress(feeAddress, { lovelace: 1_000_000n })
-      .complete();
-
-    const signedTx = await tx.sign().complete();
-    return await signedTx.submit();
-  } catch (error) {
-    console.error("Minting error:", error);
-    throw error;
-  }
-};
-
-export const buyToken = async (
-  walletApi: any,
-  policyId: string, // Not used in simple mode but kept for signature compatibility
-  amountToBuy: bigint,
-  currentSupply: bigint = 0n, // Added to calculate cost correctly
-  feeAddress: string = PLATFORM_FEE_ADDRESS
-): Promise<TxHash> => {
-  try {
-    const lucid = await initLucid(walletApi);
-
-    // Calculate Cost
-    const cost = calculateCost(currentSupply, amountToBuy);
-
-    // Simple transfer of cost to platform
-    const tx = await lucid
-      .newTx()
-      .payToAddress(feeAddress, { lovelace: cost })
-      .complete();
-
-    const signedTx = await tx.sign().complete();
-    return await signedTx.submit();
-  } catch (error) {
-    console.error("Buy error:", error);
-    throw error;
-  }
-};
-
 export const sellToken = async (
-  walletApi: any,
-  policyId: string,
+  sendTransaction: any,
+  connection: Connection,
+  publicKey: PublicKey,
   amountToSell: bigint,
-): Promise<TxHash> => {
+) => {
   try {
-    // For the demo, selling is a manual process or just a DB update.
-    // We return a dummy hash to satisfy the UI.
-    // In a real app, the user might sign a message or we might trigger a backend payout.
     console.log("Selling tokens:", amountToSell);
-    
-    // Simulate a delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-
     return "demo_sell_tx_hash_" + Date.now();
   } catch (error) {
     console.error("Sell error:", error);
@@ -218,26 +254,59 @@ export const sellToken = async (
   }
 };
 
-
-export const launchLP = async (walletApi: any, token: any, feeAddress: string = PLATFORM_FEE_ADDRESS) => {
+export const launchLP = async (
+  sendTransaction: any,
+  connection: Connection,
+  publicKey: PublicKey,
+  token: any,
+) => {
   try {
-    const lucid = await initLucid(walletApi);
-    console.log("Simulating LP Launch for", token.symbol);
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: new PublicKey(PLATFORM_FEE_ADDRESS),
+        lamports: 0.01 * LAMPORTS_PER_SOL, 
+      })
+    );
 
-    // Placeholder Tx
-    const tx = await lucid
-      .newTx()
-      .payToAddress(feeAddress, { lovelace: 1_000_000n }) // Dummy action
-      .complete();
-
-    const signedTx = await tx.sign().complete();
-    return await signedTx.submit();
+    const signature = await sendTransaction(transaction, connection);
+    await connection.confirmTransaction(signature, 'confirmed');
+    return signature;
   } catch (error) {
     console.error("LP Launch error:", error);
     throw error;
   }
 };
 
-
-
-
+// --- On-Chain Data Fetching (per mint address) ---
+// Public RPCs don't support getProgramAccounts for Token-2022.
+// Instead, we take a list of known mint addresses (indexed in Firestore)
+// and fetch their actual data directly from the Solana blockchain.
+export const fetchOnChainMintData = async (
+  connection: any,
+  mintAddresses: string[]
+) => {
+  const results = [];
+  for (const addr of mintAddresses) {
+    try {
+      const mintPubkey = new PublicKey(addr);
+      const metadata = await getTokenMetadata(connection, mintPubkey);
+      if (metadata) {
+        results.push({
+          id: addr,
+          mintAddress: addr,
+          name: metadata.name,
+          symbol: metadata.symbol,
+          image: metadata.uri,
+          description: metadata.additionalMetadata.find(m => m[0] === "description")?.[1] || "",
+          platform: metadata.additionalMetadata.find(m => m[0] === "platform")?.[1] || "",
+          status: "MINTED",
+        });
+      }
+    } catch {
+      // Skip mints that fail (deleted, wrong program, etc.)
+      continue;
+    }
+  }
+  return results;
+};

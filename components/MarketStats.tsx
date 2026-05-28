@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, where } from "firebase/firestore";
 import Link from "next/link";
 
 interface Coin {
@@ -211,7 +211,12 @@ export default function MarketStats() {
       }
       setError(null);
       const coinsRef = collection(db, "memecoins");
-      const q = query(coinsRef, orderBy("createdAt", "desc"), limit(50));
+      const q = query(
+        coinsRef, 
+        where("status", "==", "MINTED"),
+        orderBy("createdAt", "desc"), 
+        limit(50)
+      );
       const querySnapshot = await getDocs(q);
 
       const coins: Coin[] = querySnapshot.docs.map((doc) => ({

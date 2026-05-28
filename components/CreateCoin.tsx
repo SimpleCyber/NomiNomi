@@ -44,7 +44,7 @@ export default function CreateCoin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { walletAddress, isConnected, walletName } = useWallet();
+  const { walletAddress, isConnected, walletName, publicKey, sendTransaction, connection } = useWallet();
 
   const checkAntiRugLimit = async (address: string) => {
     const thirtyDaysAgo = new Date();
@@ -76,7 +76,7 @@ export default function CreateCoin() {
     const jsonString = JSON.stringify(metadata);
     const encoder = new TextEncoder();
     const data = encoder.encode(jsonString);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer as ArrayBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray
       .map((b) => b.toString(16).padStart(2, "0"))
@@ -129,13 +129,13 @@ export default function CreateCoin() {
         ...metadata,
         metadataHash,
         maxSupply: 1000000,
-        fundingGoalAda: 100,
+        fundingGoalSOL: 100,
         status: "FUNDING", // Initial status
         isPaused: false,
         createdAt: serverTimestamp(),
         creatorAddress: walletAddress,
         currentSupply: 0,
-        raisedAda: 0,
+        raisedSOL: 0,
         marketCap: 0,
         volume: 0,
       });
@@ -148,30 +148,28 @@ export default function CreateCoin() {
       // We can update the doc status to "MINTED" after success.
 
       try {
-        const cardano = (window as any).cardano;
-        if (!walletName) throw new Error("Wallet not connected properly");
-        const walletApi = await cardano[walletName].enable();
+        if (!publicKey) throw new Error("Wallet not connected properly");
 
         // Fetch Admin Wallet Address
         const statsRef = doc(db, "platform_stats", "global");
         const statsSnap = await getDoc(statsRef);
         const adminAddress = statsSnap.exists() ? statsSnap.data().adminWalletAddress : undefined;
-
-        const txHash = await mintToken(walletApi, metadata, metadataHash, adminAddress);
+        
+        const { signature: txHash, mint } = await mintToken(sendTransaction, connection, publicKey, metadata, adminAddress);
         console.log("Mint Tx Hash:", txHash);
+        console.log("Mint Address:", mint);
 
-        // Update Firestore with Tx Hash
-        await updateDoc(docRef, { txHash, status: "MINTED" });
+        // Update Firestore with Tx Hash and Mint Address
+        await updateDoc(docRef, { txHash, mintAddress: mint, status: "MINTED" });
 
         // Update Platform Stats
         await updateDoc(statsRef, {
-            totalEarnings: increment(1), // 1 ADA Fee
+            totalEarnings: increment(0.01), // Fixed SOL Fee
             totalTransactions: increment(1)
         });
 
       } catch (txError) {
         console.error("Transaction failed:", txError);
-        // await deleteDoc(docRef); // Optional rollback
         toast.error("On-chain transaction failed. Please try again.");
         throw new Error("On-chain transaction failed. Please try again.");
       }

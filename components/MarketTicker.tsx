@@ -4,15 +4,10 @@ import { LayoutGrid, List, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Market } from "@/data/constants";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { fetchOnChainMintData } from "@/lib/transactions";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
-  Timestamp,
-} from "firebase/firestore";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import Link from "next/link";
 
 export default function MarketTicker() {
@@ -23,87 +18,54 @@ export default function MarketTicker() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
 
+  const { connection } = useConnection();
+
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
+        // Step 1: Get mint addresses from Firestore (lightweight index)
         const q = query(
           collection(db, "memecoins"),
+          where("status", "==", "MINTED"),
           orderBy("createdAt", "desc"),
-          limit(50),
+          limit(50)
         );
-        const querySnapshot = await getDocs(q);
+        const snapshot = await getDocs(q);
+        const mintAddresses = snapshot.docs
+          .map(doc => doc.data().mintAddress)
+          .filter(Boolean) as string[];
 
-        const fetchedMarkets: Market[] = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
+        if (mintAddresses.length === 0) {
+          setMarkets([]);
+          setIsLoading(false);
+          return;
+        }
 
-          // Calculate age
-          let age = "New";
-          if (data.createdAt) {
-            const createdAt =
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate()
-                : new Date(data.createdAt);
-            const diffInSeconds = Math.floor(
-              (new Date().getTime() - createdAt.getTime()) / 1000,
-            );
+        // Step 2: Fetch actual token data from Solana blockchain
+        const onChainData = await fetchOnChainMintData(connection, mintAddresses);
 
-            if (diffInSeconds < 60) age = `${diffInSeconds}s`;
-            else if (diffInSeconds < 3600)
-              age = `${Math.floor(diffInSeconds / 60)}m`;
-            else if (diffInSeconds < 86400)
-              age = `${Math.floor(diffInSeconds / 3600)}h`;
-            else age = `${Math.floor(diffInSeconds / 86400)}d`;
-          }
-
-          // Format Market Cap
-          const marketCap = data.marketCap
-            ? typeof data.marketCap === "number"
-              ? `${data.marketCap.toFixed(2)} ADA`
-              : data.marketCap
-            : "$0";
-
-          return {
-            id: doc.id,
-            name: data.name || "Unknown",
-            symbol: data.symbol || "UNK",
-            price: data.price || "$0.00",
-            volume:
-              typeof data.volume === "number"
-                ? `${data.volume.toFixed(2)} ADA`
-                : data.volume || "$0",
-            marketCap: marketCap,
-            change: data.change || "0%",
-            change5m: data.change5m || "0%",
-            change1h: data.change1h || "0%",
-            change6h: data.change6h || "0%",
-            isPositive: data.isPositive !== undefined ? data.isPositive : true,
-            chartData: data.chartData || [],
-            bondingCurve: data.bondingCurve || 0,
-            ath: data.ath || "$0",
-            age: age,
-            txns: data.txns || 0,
-            traders: data.traders || 0,
-            image: data.image || "/placeholder.png",
-            description: data.description || "",
-            creatorAddress: data.creatorAddress || "",
-          };
-        });
-
-        // Sort: Images first, then by createdAt (implied by query order, but we re-sort to be safe)
-        fetchedMarkets.sort((a, b) => {
-          const aHasImage =
-            a.image &&
-            a.image !== "/placeholder.png" &&
-            !a.image.includes("placeholder");
-          const bHasImage =
-            b.image &&
-            b.image !== "/placeholder.png" &&
-            !b.image.includes("placeholder");
-
-          if (aHasImage && !bHasImage) return -1;
-          if (!aHasImage && bHasImage) return 1;
-          return 0; // Maintain existing order (createdAt)
-        });
+        const fetchedMarkets: Market[] = onChainData.map((mint: any) => ({
+          id: mint.id,
+          name: mint.name || "Unknown",
+          symbol: mint.symbol || "UNK",
+          price: "$0.00",
+          volume: "0 SOL",
+          marketCap: "0 SOL",
+          change: "0%",
+          change5m: "0%",
+          change1h: "0%",
+          change6h: "0%",
+          isPositive: true,
+          chartData: [],
+          bondingCurve: 0,
+          ath: "$0",
+          age: "New",
+          txns: 0,
+          traders: 0,
+          image: mint.image || "/placeholder.png",
+          description: mint.description || "",
+          creatorAddress: "",
+        }));
 
         setMarkets(fetchedMarkets);
       } catch (error) {
@@ -114,7 +76,9 @@ export default function MarketTicker() {
     };
 
     fetchMarkets();
-  }, []);
+    const interval = setInterval(fetchMarkets, 60000);
+    return () => clearInterval(interval);
+  }, [connection]);
 
   // Pagination Logic
   const totalPages = Math.ceil(markets.length / ITEMS_PER_PAGE);
@@ -401,7 +365,7 @@ export default function MarketTicker() {
                     {/* Description */}
                     <p className="text-xs text-[var(--muted)] line-clamp-2 mt-1">
                       {market.description ||
-                        `${market.name} is a community driven project on Cardano. Join the movement!`}
+                        `${market.name} is a community driven project on Solana. Join the movement!`}
                     </p>
                   </div>
                 </Link>

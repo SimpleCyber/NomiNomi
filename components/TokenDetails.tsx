@@ -4,12 +4,14 @@ import { useEffect, useState, useMemo } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp, Timestamp, limit, updateDoc, increment, setDoc } from "firebase/firestore";
 import { useWallet } from "../context/WalletContext";
-import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw, BarChart2, LineChart } from "lucide-react";
+import { PublicKey } from "@solana/web3.js";
+import { Loader2, ExternalLink, Globe, Twitter, Send, Copy, RefreshCw, BarChart2, LineChart, Activity } from "lucide-react";
 import Image from "next/image";
 import { buyToken, sellToken, launchLP, calculateAmountOut, calculateRefund } from "../lib/transactions";
 import PriceChart from "./PriceChart";
 import CandleChart from "./CandleChart";
 import { toast } from "sonner";
+import { getTokenMetadata } from "@solana/spl-token";
 
 interface Comment {
   id: string;
@@ -45,7 +47,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   const [userBalance, setUserBalance] = useState<number>(0);
   const [estTokens, setEstTokens] = useState<string>("0");
   const [holders, setHolders] = useState<any[]>([]);
-  const { isConnected, walletAddress, walletName } = useWallet();
+  const { isConnected, walletAddress, walletName, publicKey, sendTransaction, connection } = useWallet();
   const [chartType, setChartType] = useState<"candle" | "line">("candle");
   const [timeframe, setTimeframe] = useState<"1m" | "5m" | "15m" | "1h" | "4h">("15m");
 
@@ -66,15 +68,44 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
   }, [tokenId, walletAddress, isConnected]);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "memecoins", tokenId), (doc) => {
-      if (doc.exists()) {
-        setToken({ id: doc.id, ...doc.data() });
+    const unsub = onSnapshot(doc(db, "memecoins", tokenId), async (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        let finalData: any = { id: docSnap.id, ...data };
+        
+        // --- On-Chain Fetching ---
+        if (data.mintAddress) {
+          try {
+            const mintPublicKey = new PublicKey(data.mintAddress);
+            const metadata = await getTokenMetadata(connection, mintPublicKey);
+            
+            if (metadata) {
+              console.log("Verified Metadata On-Chain:", metadata);
+              // Override/Supplement Firestore data with On-Chain data
+              finalData.name = metadata.name || finalData.name;
+              finalData.symbol = metadata.symbol || finalData.symbol;
+              finalData.image = metadata.uri || finalData.image;
+              
+              // If there are additional metadata fields (like description)
+              const descriptionField = metadata.additionalMetadata.find(m => m[0] === "description");
+              if (descriptionField) {
+                 finalData.description = descriptionField[1];
+              }
+              
+              finalData.isVerifiedOnChain = true;
+            }
+          } catch (e) {
+            console.error("Failed to fetch on-chain metadata:", e);
+          }
+        }
+        
+        setToken(finalData);
       }
       setLoading(false);
     });
 
     return () => unsub();
-  }, [tokenId]);
+  }, [tokenId, connection]);
 
   // Fetch Comments
   useEffect(() => {
@@ -156,16 +187,14 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
     setIsBuying(true);
     try {
-      const cardano = (window as any).cardano;
-      if (!walletName) throw new Error("Wallet not connected properly");
-      const walletApi = await cardano[walletName].enable();
+      if (!publicKey) throw new Error("Wallet not connected properly");
 
       // Calculate amounts
       const currentSupply = BigInt(token.currentSupply || 0);
-      const amountAdaInput = parseFloat(buyAmount);
-      const amountAdaBig = BigInt(Math.floor(amountAdaInput * 1_000_000));
+      const amountSolInput = parseFloat(buyAmount);
+      const amountSolBig = BigInt(Math.floor(amountSolInput * 1_000_000_000));
       
-      const amountOut = calculateAmountOut(currentSupply, amountAdaBig);
+      const amountOut = calculateAmountOut(currentSupply, amountSolBig);
       const amountOutNumber = Number(amountOut);
 
       // Fetch Admin Wallet Address
@@ -173,25 +202,23 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       const statsSnap = await getDoc(statsRef);
       const adminAddress = statsSnap.exists() ? statsSnap.data().adminWalletAddress : undefined;
 
-      // Execute Transaction (Fee only)
-      const txHash = await buyToken(walletApi, token.token_policy_id || "", amountOut, currentSupply, adminAddress);
+      // Execute Transaction (SOL transfer)
+      const txHash = await buyToken(sendTransaction, connection, publicKey, amountOut, currentSupply, adminAddress);
       console.log("Buy Tx:", txHash);
 
       // Update Token State in Firestore
-      const newRaisedAda = (token.raisedAda || 0) + amountAdaInput;
+      const newRaisedSol = (token.raisedAda || 0) + amountSolInput;
       const newCurrentSupply = (token.currentSupply || 0) + amountOutNumber;
-      const bondingCurveProgress = Math.min((newRaisedAda / 100) * 100, 100);
+      const bondingCurveProgress = Math.min((newRaisedSol / 100) * 100, 100);
       
       // Calculate Price and Market Cap
-      // Price = ADA / Token (for this trade) or derived from curve
-      // Simple approximation: Price = amountAdaInput / amountOutNumber
-      const tradePrice = amountAdaInput / amountOutNumber;
+      const tradePrice = amountSolInput / amountOutNumber;
       const newMarketCap = newCurrentSupply * tradePrice;
 
       await updateDoc(doc(db, "memecoins", tokenId), {
-        raisedAda: increment(amountAdaInput),
+        raisedAda: increment(amountSolInput),
         currentSupply: increment(amountOutNumber),
-        volume: increment(amountAdaInput),
+        volume: increment(amountSolInput),
         marketCap: newMarketCap, // Updated Market Cap logic
         bondingCurve: bondingCurveProgress,
         holderCount: increment(0) // Will update below if new holder
@@ -199,7 +226,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
       // Update Platform Stats
       await updateDoc(statsRef, {
-          totalEarnings: increment(amountAdaInput), 
+          totalEarnings: increment(amountSolInput), 
           totalTransactions: increment(1)
       });
 
@@ -236,7 +263,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       // Record Trade
       await addDoc(collection(db, "memecoins", tokenId, "trades"), {
         type: "buy",
-        amountAda: amountAdaInput,
+        amountAda: amountSolInput,
         amountToken: amountOutNumber,
         account: walletAddress,
         timestamp: serverTimestamp(),
@@ -267,35 +294,33 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
 
     setIsSelling(true);
     try {
-      const cardano = (window as any).cardano;
-      if (!walletName) throw new Error("Wallet not connected properly");
-      const walletApi = await cardano[walletName].enable();
+      if (!publicKey) throw new Error("Wallet not connected properly");
 
       // Calculate amounts
       const currentSupply = BigInt(token.currentSupply || 0);
       const amountToSell = parseFloat(sellAmount);
       const amountToSellBig = BigInt(Math.floor(amountToSell));
       
-      const refundLovelace = calculateRefund(currentSupply, amountToSellBig);
-      const refundAda = Number(refundLovelace) / 1_000_000;
+      const refundLamports = calculateRefund(currentSupply, amountToSellBig);
+      const refundSol = Number(refundLamports) / 1_000_000_000;
 
       // Execute Transaction (Dummy)
-      const txHash = await sellToken(walletApi, token.token_policy_id || "", amountToSellBig);
+      const txHash = await sellToken(sendTransaction, connection, publicKey, amountToSellBig);
       console.log("Sell Tx:", txHash);
 
       // Update Token State
-      const newRaisedAda = (token.raisedAda || 0) - refundAda;
+      const newRaisedSol = (token.raisedAda || 0) - refundSol;
       const newCurrentSupply = (token.currentSupply || 0) - amountToSell;
-      const bondingCurveProgress = Math.min((newRaisedAda / 100) * 100, 100);
+      const bondingCurveProgress = Math.min((newRaisedSol / 100) * 100, 100);
       
       // Calculate Price and Market Cap
-      const tradePrice = refundAda / amountToSell;
+      const tradePrice = refundSol / amountToSell;
       const newMarketCap = newCurrentSupply * tradePrice;
 
       await updateDoc(doc(db, "memecoins", tokenId), {
-        raisedAda: increment(-refundAda),
+        raisedAda: increment(-refundSol),
         currentSupply: increment(-amountToSell),
-        volume: increment(refundAda), // Volume always increases
+        volume: increment(refundSol), // Volume always increases
         marketCap: newMarketCap,
         bondingCurve: bondingCurveProgress
       });
@@ -327,14 +352,14 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
       // Record Trade
       await addDoc(collection(db, "memecoins", tokenId, "trades"), {
         type: "sell",
-        amountAda: refundAda,
+        amountAda: refundSol,
         amountToken: amountToSell,
         account: walletAddress,
         timestamp: serverTimestamp(),
         txnHash: txHash,
       });
 
-      toast.success(`Sold ${amountToSell} tokens for ${refundAda.toFixed(2)} ADA!`);
+      toast.success(`Sold ${amountToSell} tokens for ${refundSol.toFixed(4)} SOL!`);
       setSellAmount("");
     } catch (error) {
       console.error("Sell failed:", error);
@@ -348,11 +373,9 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
     if (!isConnected) return;
     setIsLaunching(true);
     try {
-      const cardano = (window as any).cardano;
-      if (!walletName) throw new Error("Wallet not connected properly");
-      const walletApi = await cardano[walletName].enable();
+      if (!publicKey) throw new Error("Wallet not connected properly");
 
-      const txHash = await launchLP(walletApi, token);
+      const txHash = await launchLP(sendTransaction, connection, publicKey, token);
       console.log("LP Launch Tx:", txHash);
       toast.success("LP Launch submitted!");
     } catch (error) {
@@ -469,6 +492,12 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-[var(--foreground)]">{token.name}</h1>
               <span className="text-[var(--muted)]">({token.symbol})</span>
+              {token.isVerifiedOnChain && (
+                <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ml-2">
+                  <Activity size={10} />
+                  On-Chain Verified
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--muted)] mb-3">
               <span>Created by</span>
@@ -512,7 +541,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
           <div className="bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl overflow-hidden h-[500px] flex flex-col">
             <div className="p-3 border-b border-[var(--border-color)] flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-sm">{token.symbol}/ADA</span>
+                <span className="font-bold text-sm">{token.symbol}/SOL</span>
                 <span className="text-xs text-green-500">+0.00%</span>
               </div>
               <div className="flex items-center gap-4">
@@ -635,7 +664,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                       <tr className="text-xs text-[var(--muted)] border-b border-[var(--border-color)]">
                         <th className="font-medium py-2 pl-2">Account</th>
                         <th className="font-medium py-2">Type</th>
-                        <th className="font-medium py-2">Amount (ADA)</th>
+                        <th className="font-medium py-2">Amount (SOL)</th>
                         <th className="font-medium py-2">Amount ({token.symbol})</th>
                         <th className="font-medium py-2">Time</th>
                         <th className="font-medium py-2 pr-2">Txn</th>
@@ -662,7 +691,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                             <td className="py-2 text-[var(--foreground)]">{trade.amountToken || "-"}</td>
                             <td className="py-2 text-[var(--muted)]">{formatTimeAgo(trade.timestamp)}</td>
                             <td className="py-2 pr-2">
-                              <a href={`https://preprod.cardanoscan.io/transaction/${trade.txnHash}`} target="_blank" className="text-blue-500 hover:underline truncate max-w-[60px] block">
+                              <a href={`https://explorer.solana.com/tx/${trade.txnHash}`} target="_blank" className="text-blue-500 hover:underline truncate max-w-[60px] block">
                                 {trade.txnHash.slice(0, 6)}
                               </a>
                             </td>
@@ -716,7 +745,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                             // Estimate tokens
                             if (val && !isNaN(parseFloat(val)) && token) {
                                 const currentSupply = BigInt(token.currentSupply || 0);
-                                const amountAdaBig = BigInt(Math.floor(parseFloat(val) * 1_000_000));
+                                const amountAdaBig = BigInt(Math.floor(parseFloat(val) * 1_000_000_000));
                                 const est = calculateAmountOut(currentSupply, amountAdaBig);
                                 setEstTokens(est.toString());
                             } else {
@@ -733,7 +762,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                     {tradeMode === "buy" ? (
                       <>
                         <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[8px]">₳</span>
-                        ADA
+                        SOL
                       </>
                     ) : (
                       <>
@@ -759,7 +788,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
                       onClick={() => setBuyAmount(amount)}
                       className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg py-1.5 text-xs font-medium hover:bg-[var(--border-color)] transition-colors"
                     >
-                      {amount} ADA
+                      {amount} SOL
                     </button>
                   ))}
                 </div>
@@ -799,10 +828,10 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
             <div className="flex justify-between text-xs text-[var(--muted)]">
               <span>{progress.toFixed(2)}%</span>
-              <span>Target: 100 ADA</span>
+              <span>Target: 100 SOL</span>
             </div>
             <p className="text-xs text-[var(--muted)] mt-3 leading-relaxed">
-              When the market cap reaches 100 ADA, all liquidity is deposited into Minswap and burned.
+              When the market cap reaches 100 SOL, all liquidity is deposited into Raydium and burned.
             </p>
           </div>
 
@@ -814,7 +843,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">Market Cap</span>
-              <span className="font-bold text-sm">{token.marketCap ? `${token.marketCap.toFixed(2)} ADA` : "$0"}</span>
+              <span className="font-bold text-sm">{token.marketCap ? `${token.marketCap.toFixed(2)} SOL` : "$0"}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">Virtual Liquidity</span>
@@ -822,7 +851,7 @@ export default function TokenDetails({ tokenId }: { tokenId: string }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-[var(--muted)]">24h Volume</span>
-              <span className="font-bold text-sm">{token.volume ? `${token.volume.toFixed(2)} ADA` : "$0"}</span>
+              <span className="font-bold text-sm">{token.volume ? `${token.volume.toFixed(2)} SOL` : "$0"}</span>
             </div>
           </div>
 

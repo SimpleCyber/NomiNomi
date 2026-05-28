@@ -63,7 +63,7 @@ export default function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
           <div className="flex gap-3">
             <a
-              href={`https://preprod.cardanoscan.io/address/${walletAddress}`}
+              href={`https://explorer.solana.com/address/${walletAddress}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-2 bg-[var(--input-bg)] hover:bg-[var(--border-color)] text-[var(--foreground)] py-2.5 rounded-lg font-medium transition-colors border border-[var(--border-color)]"
