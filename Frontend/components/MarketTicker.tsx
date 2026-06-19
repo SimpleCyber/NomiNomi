@@ -326,7 +326,7 @@ export default function MarketTicker() {
                           {market.symbol}
                         </span>
                         {market.id && String(market.id).length > 20 && (
-                          <a
+                          <Link
                             href={`https://explorer.solana.com/address/${market.id}${explorerCluster}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -335,7 +335,7 @@ export default function MarketTicker() {
                             title="View on Solana Explorer"
                           >
                             <ExternalLink size={12} />
-                          </a>
+                          </Link>
                         )}
                       </div>
 
