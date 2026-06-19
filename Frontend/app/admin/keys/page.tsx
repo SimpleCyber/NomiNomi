@@ -97,7 +97,7 @@ export default function KeysPage() {
 
   const copyToClipboard = (text: string, keyName: string) => {
     if (!text) {
-        toast.error(`Value for \${keyName} is empty!`);
+        toast.error(`Value for ${keyName} is empty!`);
         return;
     }
     navigator.clipboard.writeText(text);
@@ -108,7 +108,7 @@ export default function KeysPage() {
 
   const copyAllToClipboard = () => {
     const allKeysText = envKeys
-      .map((k) => `\${k.key}=\${k.value}`)
+      .map((k) => `${k.key}=${k.value}`)
       .join("\n");
     navigator.clipboard.writeText(allKeysText);
     setCopiedAll(true);
@@ -188,7 +188,7 @@ export default function KeysPage() {
                    </div>
                    
                    <div className="flex items-center gap-3 bg-[var(--background)] px-4 py-2 rounded-lg border border-[var(--border-color)] lg:w-1/2 justify-between">
-                     <span className={`font-mono text-sm truncate max-w-[200px] lg:max-w-xs \${!env.value && "text-[var(--muted)] italic"}`}>
+                     <span className={`font-mono text-sm truncate max-w-[200px] lg:max-w-xs ${!env.value && "text-[var(--muted)] italic"}`}>
                         {displayValue}
                      </span>
                      <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
