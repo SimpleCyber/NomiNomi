@@ -9,7 +9,8 @@ import {
   LogOut, 
   Shield,
   Menu as MenuIcon,
-  X as CloseIcon
+  X as CloseIcon,
+  Key
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +29,7 @@ export function AdminSidebar({ onLogout, user }: AdminSidebarProps) {
     { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
     { name: "Token Management", icon: Coins, path: "/admin/tokens" },
     { name: "Transactions", icon: History, path: "/admin/transactions" },
+    { name: "System Keys", icon: Key, path: "/admin/keys" },
     { name: "Admin Settings", icon: Settings, path: "/admin/settings" },
     { name: "User Base", icon: Users, path: "/admin/users" },
   ];
